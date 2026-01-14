@@ -1,0 +1,178 @@
+{
+  "name": "antigravity-sync",
+  "displayName": "Antigravity Sync",
+  "description": "Sync your Gemini Antigravity context (~/.gemini/) across machines via private GitHub repository",
+  "version": "0.1.0",
+  "publisher": "antigravity-sync",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AntisyncOrg/antigravity-sync"
+  },
+  "bugs": {
+    "url": "https://github.com/AntisyncOrg/antigravity-sync/issues"
+  },
+  "homepage": "https://github.com/AntisyncOrg/antigravity-sync#readme",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "sync",
+    "settings",
+    "gemini",
+    "antigravity",
+    "backup",
+    "ai-context"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "antigravitySync.configure",
+        "title": "Antigravity Sync: Configure Repository",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "antigravitySync.syncNow",
+        "title": "Antigravity Sync: Sync Now",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "antigravitySync.push",
+        "title": "Antigravity Sync: Push Changes",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "antigravitySync.pull",
+        "title": "Antigravity Sync: Pull Changes",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "antigravitySync.showStatus",
+        "title": "Antigravity Sync: Show Status",
+        "icon": "$(info)"
+      },
+      {
+        "command": "antigravitySync.openPanel",
+        "title": "Antigravity Sync: Open Panel",
+        "icon": "$(window)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "antigravity-sync",
+          "title": "Antigravity Sync",
+          "icon": "resources/icons/sidebar.svg"
+        }
+      ]
+    },
+    "views": {
+      "antigravity-sync": [
+        {
+          "type": "webview",
+          "id": "antigravitySync.mainPanel",
+          "name": "Sync Dashboard"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Antigravity Sync",
+      "properties": {
+        "antigravitySync.repositoryUrl": {
+          "type": "string",
+          "default": "",
+          "description": "GitHub repository URL for syncing (must be private)"
+        },
+        "antigravitySync.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable Antigravity Sync completely"
+        },
+        "antigravitySync.autoSync": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically sync changes when files change"
+        },
+        "antigravitySync.syncIntervalMinutes": {
+          "type": "number",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 60,
+          "description": "Auto-sync interval in minutes"
+        },
+        "antigravitySync.excludePatterns": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "description": "Additional patterns to exclude from sync"
+        },
+        "antigravitySync.geminiPath": {
+          "type": "string",
+          "default": "",
+          "description": "Custom path to .gemini folder (default: ~/.gemini)"
+        },
+        "antigravitySync.syncFolders": {
+          "type": "array",
+          "default": [
+            "knowledge",
+            "antigravity"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Folders to sync within .gemini directory"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "yarn run build",
+    "build": "webpack --mode production",
+    "build:dev": "webpack --mode development",
+    "watch": "webpack --mode development --watch",
+    "lint": "eslint src --ext ts",
+    "lint:fix": "eslint src --ext ts --fix",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:e2e": "vscode-test",
+    "package": "vsce package --yarn",
+    "publish": "vsce publish --yarn"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.11",
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@types/vscode-webview": "^1.57.4",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "@vscode/test-electron": "^2.3.8",
+    "@vscode/vsce": "^2.22.0",
+    "copy-webpack-plugin": "^11.0.0",
+    "css-loader": "^6.8.1",
+    "eslint": "^8.54.0",
+    "jest": "^29.7.0",
+    "style-loader": "^3.3.3",
+    "ts-jest": "^29.1.1",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.3.2",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "@octokit/rest": "^20.0.2",
+    "@vscode/webview-ui-toolkit": "^1.4.0",
+    "chokidar": "^3.5.3",
+    "ignore": "^5.3.0",
+    "simple-git": "^3.21.0"
+  }
+}
