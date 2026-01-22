@@ -18,7 +18,10 @@ module.exports = [
       { vscode: 'commonjs vscode' },
       // Externalize native node modules
       /^fsevents$/,
-      /\.node$/
+      /\.node$/,
+      // Optional WebSocket dependencies (not needed, just removes warnings)
+      { bufferutil: 'commonjs bufferutil' },
+      { 'utf-8-validate': 'commonjs utf-8-validate' }
     ],
     resolve: {
       extensions: ['.ts', '.js']

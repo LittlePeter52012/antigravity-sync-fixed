@@ -17,7 +17,7 @@ provideVSCodeDesignSystem().register(
   vsCodeTextField()
 );
 
-import { MainPanel, showConfigured, updateStatus, showError, showConfigError, appendLog, clearLog, updateGitStatus, setRefreshLoading, updateCountdown, updateAutoRetryStatus, appendAutoRetryLog, updateCDPStatus } from './panels/MainPanel';
+import { MainPanel, showConfigured, updateStatus, showError, showConfigError, appendLog, clearLog, updateGitStatus, setRefreshLoading, updateCountdown, updateAutoRetryStatus, appendAutoRetryLog, updateCDPStatus, updateAutoStartCheckbox } from './panels/MainPanel';
 
 // Declare vscode API type
 interface VsCodeApi {
@@ -96,7 +96,12 @@ interface CDPStatusMessage {
   data: { available: boolean; hasFlag: boolean; port: number };
 }
 
-type ExtensionMessage = ConfiguredMessage | StatusMessage | ErrorMessage | ConfigErrorMessage | LogMessage | ClearLogMessage | GitStatusMessage | CountdownMessage | AutoRetryStatusMessage | AutoRetryLogMessage | CDPStatusMessage;
+interface AutoStartSettingMessage {
+  type: 'autoStartSetting';
+  data: { enabled: boolean };
+}
+
+type ExtensionMessage = ConfiguredMessage | StatusMessage | ErrorMessage | ConfigErrorMessage | LogMessage | ClearLogMessage | GitStatusMessage | CountdownMessage | AutoRetryStatusMessage | AutoRetryLogMessage | CDPStatusMessage | AutoStartSettingMessage;
 
 window.addEventListener('message', (event: MessageEvent<ExtensionMessage>) => {
   const message = event.data;
@@ -134,6 +139,9 @@ window.addEventListener('message', (event: MessageEvent<ExtensionMessage>) => {
       break;
     case 'cdpStatus':
       updateCDPStatus(message.data.available, message.data.hasFlag, message.data.port);
+      break;
+    case 'autoStartSetting':
+      updateAutoStartCheckbox(message.data.enabled);
       break;
   }
 });

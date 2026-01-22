@@ -85,6 +85,13 @@ export class SidePanelProvider implements vscode.WebviewViewProvider {
         case 'stopAutoRetry':
           await this.handleStopAutoRetry();
           break;
+        case 'setAutoStart':
+          await this.handleSetAutoStart(message.data?.enabled ?? false);
+          break;
+        case 'getAutoRetryStatus':
+          this.sendAutoRetryStatus();
+          this.sendAutoStartSetting();
+          break;
       }
     });
   }
@@ -458,6 +465,38 @@ export class SidePanelProvider implements vscode.WebviewViewProvider {
   }
 
   /**
+   * Try to auto-start Auto Retry (called from extension activation)
+   * Only starts if CDP is available, otherwise logs error silently
+   */
+  public async tryAutoStartRetry(): Promise<void> {
+    // Set up log callback
+    this._autoRetryService.setLogCallback((msg, type) => {
+      this.sendAutoRetryLog(msg, type === 'warning' ? 'info' : type);
+    });
+
+    // Check CDP status
+    const cdpAvailable = await this._autoRetryService.isCDPAvailable();
+
+    if (!cdpAvailable) {
+      this.sendAutoRetryLog('Auto-start: CDP not available. Please restart IDE with CDP flag.', 'error');
+      this.sendAutoRetryStatus();
+      return;
+    }
+
+    // CDP available - start
+    this.sendAutoRetryLog('Auto-starting Auto Retry...', 'info');
+    const started = await this._autoRetryService.start();
+
+    if (started) {
+      this.sendAutoRetryStatus();
+      this.sendAutoRetryLog('✅ Auto Retry auto-started!', 'success');
+    } else {
+      this.sendAutoRetryLog('Auto-start failed', 'error');
+      this.sendAutoRetryStatus();
+    }
+  }
+
+  /**
    * Handle start auto-retry from webview
    * Single button flow: check CDP -> if OK, start; if not, auto-setup
    */
@@ -532,6 +571,28 @@ export class SidePanelProvider implements vscode.WebviewViewProvider {
     this._view.webview.postMessage({
       type: 'autoRetryLog',
       data: { message, logType }
+    });
+  }
+
+  /**
+   * Handle set auto-start setting from webview
+   */
+  private async handleSetAutoStart(enabled: boolean): Promise<void> {
+    const config = vscode.workspace.getConfiguration('antigravitySync');
+    await config.update('autoStartRetry', enabled, vscode.ConfigurationTarget.Global);
+    this.sendAutoRetryLog(enabled ? 'Auto-start enabled' : 'Auto-start disabled', 'info');
+  }
+
+  /**
+   * Send auto-start setting to webview
+   */
+  private sendAutoStartSetting(): void {
+    if (!this._view) return;
+    const config = vscode.workspace.getConfiguration('antigravitySync');
+    const enabled = config.get('autoStartRetry', false);
+    this._view.webview.postMessage({
+      type: 'autoStartSetting',
+      data: { enabled }
     });
   }
 

@@ -2,7 +2,7 @@
   "name": "antigravity-sync",
   "displayName": "Antigravity Sync - Retry",
   "description": "Auto-sync AI context + Auto-accept/retry for AI coding agents. Zero-babysitting automation.",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "publisher": "mrd9999",
   "author": "Dung Le <https://www.facebook.com/mrd.900s>",
   "icon": "resources/icons/icon.png",
@@ -141,6 +141,11 @@
           "type": "boolean",
           "default": false,
           "description": "Enable auto-accept for AI agent buttons (requires CDP setup)"
+        },
+        "antigravitySync.autoStartRetry": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically start Auto Retry when IDE launches"
         },
         "antigravitySync.cdpPort": {
           "type": "number",

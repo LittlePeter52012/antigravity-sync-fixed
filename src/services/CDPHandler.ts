@@ -129,7 +129,14 @@ export class CDPHandler {
     this.isEnabled = true;
     this.log(`Scanning ports ${this.basePort - this.portRange} to ${this.basePort + this.portRange}...`, 'info');
 
-    let connected = false;
+    // Clean up dead connections first
+    for (const [id, conn] of this.connections) {
+      if (conn.ws.readyState !== 1) { // 1 = OPEN
+        this.connections.delete(id);
+      }
+    }
+
+    let newConnections = 0;
 
     for (let port = this.basePort - this.portRange; port <= this.basePort + this.portRange; port++) {
       try {
@@ -139,7 +146,7 @@ export class CDPHandler {
           if (!this.connections.has(id)) {
             const success = await this.connect(id, page.webSocketDebuggerUrl);
             if (success) {
-              connected = true;
+              newConnections++;
             }
           }
           await this.inject(id, config);
@@ -149,13 +156,15 @@ export class CDPHandler {
       }
     }
 
-    if (connected) {
-      this.log(`Connected to ${this.connections.size} page(s)`, 'success');
+    const totalConnections = this.connections.size;
+
+    if (totalConnections > 0) {
+      this.log(`Connected to ${totalConnections} page(s)`, 'success');
+      return true;
     } else {
       this.log('No CDP connections established. Is IDE launched with --remote-debugging-port=31905?', 'warning');
+      return false;
     }
-
-    return connected;
   }
 
   /**

@@ -46,20 +46,22 @@ export class MainPanel {
           <div class="section-header">
             <span class="codicon codicon-zap"></span>
             <span class="section-title">Auto Retry</span>
+            <span id="auto-retry-status" class="status-badge" style="margin-left: auto; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground);">OFF</span>
           </div>
           <p class="description" style="font-size: 11px; opacity: 0.8; margin: 0 0 8px 0;">
             Auto-click Retry buttons when AI agent encounters errors
           </p>
           
-          <!-- Single Start/Stop Button -->
+          <!-- Auto Start Checkbox -->
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <vscode-checkbox id="chk-auto-start">Auto-start on launch</vscode-checkbox>
+          </div>
+          
+          <!-- Toggle Button (shows Start or Stop based on state) -->
           <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-            <vscode-button id="btn-start-auto-accept" appearance="primary" style="flex: 1;">
-              <span class="codicon codicon-play"></span>
-              Start Auto Retry
-            </vscode-button>
-            <vscode-button id="btn-stop-auto-accept" appearance="secondary" style="flex: 1; display: none;">
-              <span class="codicon codicon-debug-stop"></span>
-              Stop
+            <vscode-button id="btn-toggle-auto-retry" appearance="primary" style="flex: 1;">
+              <span class="codicon codicon-play" id="btn-toggle-icon"></span>
+              <span id="btn-toggle-text">Start</span>
             </vscode-button>
           </div>
           
@@ -283,15 +285,25 @@ export class MainPanel {
       clearLog();
     });
 
-    // Auto Retry - Start
-    document.getElementById('btn-start-auto-accept')?.addEventListener('click', () => {
-      vscode.postMessage({ type: 'startAutoRetry' });
+    // Auto Retry - Toggle button
+    document.getElementById('btn-toggle-auto-retry')?.addEventListener('click', () => {
+      const statusBadge = document.getElementById('auto-retry-status');
+      const isRunning = statusBadge?.textContent === 'ON';
+      if (isRunning) {
+        vscode.postMessage({ type: 'stopAutoRetry' });
+      } else {
+        vscode.postMessage({ type: 'startAutoRetry' });
+      }
     });
 
-    // Auto Retry - Stop
-    document.getElementById('btn-stop-auto-accept')?.addEventListener('click', () => {
-      vscode.postMessage({ type: 'stopAutoRetry' });
+    // Auto Retry - Auto-start checkbox
+    document.getElementById('chk-auto-start')?.addEventListener('change', (e) => {
+      const checkbox = e.target as HTMLInputElement;
+      vscode.postMessage({ type: 'setAutoStart', data: { enabled: checkbox.checked } });
     });
+
+    // Request initial auto-retry status and auto-start setting
+    vscode.postMessage({ type: 'getAutoRetryStatus' });
   }
 }
 
@@ -516,21 +528,40 @@ export function updateCountdown(seconds: number): void {
 }
 
 export function updateAutoRetryStatus(running: boolean, retryCount: number, connectionCount?: number): void {
-  const startBtn = document.getElementById('btn-start-auto-accept');
-  const stopBtn = document.getElementById('btn-stop-auto-accept');
-  const cdpIcon = document.getElementById('cdp-status-icon');
-  const cdpText = document.getElementById('cdp-status-text');
+  const statusBadge = document.getElementById('auto-retry-status');
+  const toggleBtn = document.getElementById('btn-toggle-auto-retry');
+  const toggleIcon = document.getElementById('btn-toggle-icon');
+  const toggleText = document.getElementById('btn-toggle-text');
 
-  if (startBtn && stopBtn) {
-    startBtn.style.display = running ? 'none' : 'inline-flex';
-    stopBtn.style.display = running ? 'inline-flex' : 'none';
+  // Update status badge
+  if (statusBadge) {
+    statusBadge.textContent = running ? 'ON' : 'OFF';
+    statusBadge.style.background = running
+      ? 'var(--vscode-debugIcon-startForeground)'
+      : 'var(--vscode-badge-background)';
+    statusBadge.style.color = running
+      ? 'white'
+      : 'var(--vscode-badge-foreground)';
   }
 
-  // Update CDP connection status if running
-  if (running && connectionCount !== undefined && cdpIcon && cdpText) {
-    cdpIcon.className = 'codicon codicon-check';
-    cdpIcon.style.color = 'var(--vscode-debugIcon-startForeground)';
-    cdpText.textContent = `CDP: ${connectionCount} page(s) connected`;
+  // Update toggle button
+  if (toggleBtn && toggleIcon && toggleText) {
+    if (running) {
+      toggleBtn.setAttribute('appearance', 'secondary');
+      toggleIcon.className = 'codicon codicon-debug-stop';
+      toggleText.textContent = 'Stop';
+    } else {
+      toggleBtn.setAttribute('appearance', 'primary');
+      toggleIcon.className = 'codicon codicon-play';
+      toggleText.textContent = 'Start';
+    }
+  }
+}
+
+export function updateAutoStartCheckbox(enabled: boolean): void {
+  const checkbox = document.getElementById('chk-auto-start') as HTMLInputElement;
+  if (checkbox) {
+    checkbox.checked = enabled;
   }
 }
 
