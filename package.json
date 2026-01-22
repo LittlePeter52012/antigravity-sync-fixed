@@ -1,8 +1,8 @@
 {
   "name": "antigravity-sync",
-  "displayName": "Antigravity Sync - Retry",
+  "displayName": "Antigravity Auto Retry/Sync",
   "description": "Auto-sync AI context + Auto-accept/retry for AI coding agents. Zero-babysitting automation.",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "publisher": "mrd9999",
   "author": "Dung Le <https://www.facebook.com/mrd.900s>",
   "icon": "resources/icons/icon.png",

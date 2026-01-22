@@ -135,19 +135,23 @@ export class Relauncher {
       `1. Close ${ideName} (File → Exit)\n` +
       `2. Reopen from Desktop or Start Menu\n\n` +
       `Option B - Use Command:\n` +
-      `1. Close ${ideName}\n` +
-      `2. Open CMD or PowerShell\n` +
-      `3. Paste the command and press Enter`,
+      `1. Click "Copy & Quit" below\n` +
+      `2. Press Win+R, type "cmd", press Enter\n` +
+      `3. Right-click to paste, press Enter`,
       { modal: true },
-      '📋 Copy Command'
+      '📋 Copy & Quit'
     );
 
-    if (choice === '📋 Copy Command') {
+    if (choice === '📋 Copy & Quit') {
       await vscode.env.clipboard.writeText(command);
       vscode.window.showInformationMessage(
-        `✅ Command copied!\n\n` +
-        `Now: Close ${ideName} → Open CMD/PowerShell → Right-click to Paste → Enter`
+        `✅ Command copied! ${ideName} will close now.\n\n` +
+        `Press Win+R → type "cmd" → Enter → Right-click paste → Enter`
       );
+      // Auto quit after short delay
+      setTimeout(() => {
+        vscode.commands.executeCommand('workbench.action.quit');
+      }, 2000);
     }
   }
 
@@ -164,24 +168,29 @@ export class Relauncher {
       `1. Close ${ideName}\n` +
       `2. Reopen from Application Menu\n\n` +
       `Option B - Use Terminal:\n` +
-      `1. Close ${ideName}\n` +
-      `2. Open Terminal\n` +
-      `3. Paste the command and press Enter`,
+      `1. Click "Copy & Quit" below\n` +
+      `2. Press Ctrl+Alt+T to open Terminal\n` +
+      `3. Paste (Ctrl+Shift+V) and press Enter`,
       { modal: true },
-      '📋 Copy Command'
+      '📋 Copy & Quit'
     );
 
-    if (choice === '📋 Copy Command') {
+    if (choice === '📋 Copy & Quit') {
       await vscode.env.clipboard.writeText(command);
       vscode.window.showInformationMessage(
-        `✅ Command copied!\n\n` +
-        `Now: Close ${ideName} → Open Terminal → Paste (Ctrl+Shift+V) → Enter`
+        `✅ Command copied! ${ideName} will close now.\n\n` +
+        `Press Ctrl+Alt+T → Paste (Ctrl+Shift+V) → Enter`
       );
+      // Auto quit after short delay
+      setTimeout(() => {
+        vscode.commands.executeCommand('workbench.action.quit');
+      }, 2000);
     }
   }
 
   /**
    * Get launch command for current platform
+   * Uses background-friendly commands so user can close terminal
    */
   private getLaunchCommand(): string {
     const ideName = this.getIdeName();
@@ -191,10 +200,12 @@ export class Relauncher {
       return `~/.local/bin/${ideName.toLowerCase()}-cdp`;
     } else if (this.platform === 'win32') {
       const exe = this.findExecutable();
-      return `"${exe}" --remote-debugging-port=${port}`;
+      // Use 'start' to run in background (no need to keep CMD open)
+      return `start "" "${exe}" --remote-debugging-port=${port}`;
     } else {
       const exe = this.findExecutable();
-      return `${exe} --remote-debugging-port=${port}`;
+      // Use 'nohup' and '&' to run in background
+      return `nohup ${exe} --remote-debugging-port=${port} > /dev/null 2>&1 &`;
     }
   }
 
