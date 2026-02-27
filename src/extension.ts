@@ -157,7 +157,7 @@ async function configureRepository(
 
   // Step 2: Get access token
   const token = await vscode.window.showInputBox({
-    title: '步骤 1/4：访问令牌',
+    title: '步骤 1/5：访问令牌',
     prompt: '请输入访问令牌（GitHub/GitLab 的 PAT 或 Bitbucket App Password）',
     password: true,
     placeHolder: '具有仓库访问权限的令牌',
@@ -176,7 +176,7 @@ async function configureRepository(
 
   // Step 3: Get repository URL
   const repoUrl = await vscode.window.showInputBox({
-    title: '步骤 2/4：私有仓库地址',
+    title: '步骤 2/5：私有仓库地址',
     prompt: '请输入私有仓库地址（GitHub / GitLab / Bitbucket 等）',
     placeHolder: 'https://github.com/user/repo 或 https://gitlab.com/user/repo',
     ignoreFocusOut: true,
@@ -194,7 +194,7 @@ async function configureRepository(
 
   // Step 4: Get sync password
   const syncPassword = await vscode.window.showInputBox({
-    title: '步骤 3/4：同步密码',
+    title: '步骤 3/5：同步密码',
     prompt: '请设置同步密码（用于设备间验证）',
     password: true,
     placeHolder: '至少 6 位',
@@ -208,6 +208,27 @@ async function configureRepository(
   });
 
   if (!syncPassword) {
+    return;
+  }
+
+  const syncPasswordConfirm = await vscode.window.showInputBox({
+    title: '步骤 4/5：确认同步密码',
+    prompt: '请再次输入同步密码以确认',
+    password: true,
+    placeHolder: '与上一步保持一致',
+    ignoreFocusOut: true,
+    validateInput: (value) => {
+      if (!value || value.length < 6) {
+        return '同步密码长度至少 6 位';
+      }
+      if (value !== syncPassword) {
+        return '两次输入的同步密码不一致';
+      }
+      return undefined;
+    }
+  });
+
+  if (!syncPasswordConfirm) {
     return;
   }
 
@@ -242,7 +263,7 @@ async function configureRepository(
 
   // Step 5: Confirmation dialog
   const confirmMessage = [
-    '步骤 4/4：确认配置',
+    '步骤 5/5：确认配置',
     '',
     `仓库地址：${repoUrl}`,
     '同步密码：已设置',

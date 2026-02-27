@@ -37,6 +37,12 @@ export class MainPanel {
             <vscode-text-field id="sync-password-input" type="password" placeholder="用于设备间验证" class="full-width"></vscode-text-field>
             <span class="hint">仅保存在本机，不会上传明文</span>
           </div>
+
+          <div class="form-group">
+            <label for="sync-password-confirm-input">确认同步密码</label>
+            <vscode-text-field id="sync-password-confirm-input" type="password" placeholder="再次输入以确认" class="full-width"></vscode-text-field>
+            <span class="hint">防止首次输入错误</span>
+          </div>
           
           <vscode-button id="btn-save-config" class="full-width" style="display: flex; justify-content: center; text-align: center;">
             <span id="btn-connect-text" style="width: 100%; text-align: center;">连接仓库</span>
@@ -229,6 +235,7 @@ export class MainPanel {
       const repoInput = document.getElementById('repo-url-input') as HTMLInputElement;
       const patInput = document.getElementById('pat-input') as HTMLInputElement;
       const passwordInput = document.getElementById('sync-password-input') as HTMLInputElement;
+      const passwordConfirmInput = document.getElementById('sync-password-confirm-input') as HTMLInputElement;
 
       // Show loading state
       setConnectLoading(true);
@@ -237,7 +244,8 @@ export class MainPanel {
         type: 'saveConfig',
         repoUrl: repoInput?.value || '',
         pat: patInput?.value || '',
-        syncPassword: passwordInput?.value || ''
+        syncPassword: passwordInput?.value || '',
+        syncPasswordConfirm: passwordConfirmInput?.value || ''
       });
     });
 
