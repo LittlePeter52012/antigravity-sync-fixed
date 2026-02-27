@@ -1,6 +1,7 @@
 # Antigravity 同步与自动重试
 
-**自动同步 AI 上下文 + 自动重试（Auto Retry）**，减少看护与手动操作。
+**自动同步 AI 上下文 + 自动重试（Auto Retry）**，减少看护与手动操作。  
+**Sync AI context + Auto Retry**, less babysitting and manual clicks.
 
 ---
 
@@ -48,6 +49,40 @@ Cmd+Shift+P / Ctrl+Shift+P
 
 ---
 
+## 更新方式（如何升级）
+
+**如果你是通过 VSIX 安装：**
+1. 扩展面板 → 右上角 `...` → **Install from VSIX...**
+2. 选择新的 `.vsix` 文件
+3. 安装后点击 **Reload / Reload Window**
+
+**如果你希望“点更新”自动升级：**
+- 需要发布到 Marketplace / Open VSX，并从商店安装该扩展。
+- 以后发布新版本时，VS Code 才会出现 **Update / 更新** 按钮。
+
+---
+
+## Update (English)
+
+**If you installed via VSIX:**
+1. Extensions view → top-right `...` → **Install from VSIX...**
+2. Select the new `.vsix` file
+3. Click **Reload / Reload Window**
+
+**If you want a one‑click Update button:**
+- Publish to Marketplace / Open VSX and install from the store.
+- VS Code will then show **Update** when a newer version is available.
+
+---
+
+## Security Notes (English)
+
+- Private repo only
+- Credentials stored in OS keychain / credential manager
+- Sensitive files are excluded by default
+- Sync data goes into repo subfolder `.antigravity-sync` to avoid touching other content
+- Sync password check is supported (password is never uploaded in plain text)
+
 ## 安装方式
 
 ### 方式 1：从 VSIX 安装
@@ -79,6 +114,8 @@ Cmd+Shift+P / Ctrl+Shift+P
 | `antigravitySync.syncFolders` | 默认同步目录列表 |
 | `antigravitySync.excludePatterns` | 额外排除规则 |
 | `antigravitySync.geminiPath` | 自定义 .gemini 路径 |
+| `antigravitySync.syncRepoSubdir` | 同步数据在仓库中的子目录（默认 `.antigravity-sync`） |
+| `antigravitySync.syncPasswordEnabled` | 是否启用同步密码校验 |
 
 ---
 
@@ -88,6 +125,8 @@ Cmd+Shift+P / Ctrl+Shift+P
 - 凭据存储在系统凭据管理器
 - 默认排除敏感文件（OAuth/凭证/系统文件等）
 - 可使用 `.antigravityignore` 追加排除规则
+- 同步数据默认写入仓库子目录 `.antigravity-sync`，避免影响仓库其他内容
+- 支持同步密码校验（用于设备间验证，不会上传明文）
 
 ---
 

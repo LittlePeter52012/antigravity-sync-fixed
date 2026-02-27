@@ -714,6 +714,14 @@ export class GitService {
   }
 
   /**
+   * Get all changed file paths
+   */
+  async getStatusFiles(): Promise<string[]> {
+    const status = await this.git.status();
+    return status.files.map(f => f.path);
+  }
+
+  /**
    * Get ahead/behind counts compared to remote
    */
   async getAheadBehind(): Promise<{ ahead: number; behind: number }> {

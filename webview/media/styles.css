@@ -551,6 +551,29 @@ vscode-divider {
   padding: var(--spacing-sm) 0;
 }
 
+.auto-retry-section #btn-toggle-auto-retry {
+  width: 100%;
+}
+
+.auto-retry-section #btn-toggle-auto-retry::part(control),
+.auto-retry-section #btn-toggle-auto-retry::part(content) {
+  display: flex;
+  flex-direction: row !important;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.auto-retry-section #btn-toggle-auto-retry::part(control) {
+  width: 100%;
+}
+
+.auto-retry-section #btn-toggle-auto-retry span {
+  display: inline-flex;
+  align-items: center;
+}
+
 .auto-retry-controls {
   display: flex;
   align-items: center;

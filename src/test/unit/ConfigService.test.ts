@@ -50,6 +50,8 @@ describe('ConfigService', () => {
       expect(config.syncIntervalMinutes).toBe(5);
       expect(config.excludePatterns).toEqual([]);
       expect(config.syncFolders).toEqual(['knowledge', 'brain', 'conversations', 'skills', 'annotations']);
+      expect(config.syncPasswordEnabled).toBe(false);
+      expect(config.syncRepoSubdir).toBe('.antigravity-sync');
     });
 
     it('should use custom values when configured', () => {
@@ -58,6 +60,8 @@ describe('ConfigService', () => {
         if (key === 'autoSync') return false;
         if (key === 'syncIntervalMinutes') return 10;
         if (key === 'syncFolders') return ['knowledge'];
+        if (key === 'syncPasswordEnabled') return true;
+        if (key === 'syncRepoSubdir') return '.custom-sync';
         return defaultValue;
       });
 
@@ -67,6 +71,8 @@ describe('ConfigService', () => {
       expect(config.autoSync).toBe(false);
       expect(config.syncIntervalMinutes).toBe(10);
       expect(config.syncFolders).toEqual(['knowledge']);
+      expect(config.syncPasswordEnabled).toBe(true);
+      expect(config.syncRepoSubdir).toBe('.custom-sync');
     });
   });
 

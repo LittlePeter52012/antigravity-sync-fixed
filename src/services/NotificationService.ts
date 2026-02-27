@@ -123,6 +123,20 @@ export class NotificationService {
           { title: '更新令牌', action: () => void vscode.commands.executeCommand('antigravitySync.configure') }
         ]
       });
+    } else if (error.message.includes('同步密码')) {
+      void this.error('同步密码验证失败', {
+        detail: '请输入正确的同步密码（需与仓库中的密码一致）。',
+        actions: [
+          { title: '重新配置', action: () => void vscode.commands.executeCommand('antigravitySync.configure') }
+        ]
+      });
+    } else if (error.message.includes('password')) {
+      void this.error('同步密码验证失败', {
+        detail: '请输入正确的同步密码（需与仓库中的密码一致）。',
+        actions: [
+          { title: '重新配置', action: () => void vscode.commands.executeCommand('antigravitySync.configure') }
+        ]
+      });
     } else if (error.message.includes('network') || error.message.includes('ENOTFOUND')) {
       void this.error('网络错误', {
         detail: '请检查你的网络连接。',

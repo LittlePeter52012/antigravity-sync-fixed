@@ -157,7 +157,7 @@ async function configureRepository(
 
   // Step 2: Get access token
   const token = await vscode.window.showInputBox({
-    title: '步骤 1/3：访问令牌',
+    title: '步骤 1/4：访问令牌',
     prompt: '请输入访问令牌（GitHub/GitLab 的 PAT 或 Bitbucket App Password）',
     password: true,
     placeHolder: '具有仓库访问权限的令牌',
@@ -176,7 +176,7 @@ async function configureRepository(
 
   // Step 3: Get repository URL
   const repoUrl = await vscode.window.showInputBox({
-    title: '步骤 2/3：私有仓库地址',
+    title: '步骤 2/4：私有仓库地址',
     prompt: '请输入私有仓库地址（GitHub / GitLab / Bitbucket 等）',
     placeHolder: 'https://github.com/user/repo 或 https://gitlab.com/user/repo',
     ignoreFocusOut: true,
@@ -189,6 +189,25 @@ async function configureRepository(
   });
 
   if (!repoUrl) {
+    return;
+  }
+
+  // Step 4: Get sync password
+  const syncPassword = await vscode.window.showInputBox({
+    title: '步骤 3/4：同步密码',
+    prompt: '请设置同步密码（用于设备间验证）',
+    password: true,
+    placeHolder: '至少 6 位',
+    ignoreFocusOut: true,
+    validateInput: (value) => {
+      if (!value || value.length < 6) {
+        return '同步密码长度至少 6 位';
+      }
+      return undefined;
+    }
+  });
+
+  if (!syncPassword) {
     return;
   }
 
@@ -221,15 +240,16 @@ async function configureRepository(
     }
   }
 
-  // Step 4: Confirmation dialog
+  // Step 5: Confirmation dialog
   const confirmMessage = [
-    '步骤 3/3：确认配置',
+    '步骤 4/4：确认配置',
     '',
     `仓库地址：${repoUrl}`,
+    '同步密码：已设置',
     '',
     '接下来将执行：',
     '• 验证访问权限',
-    '• 初始化同步仓库',
+    '• 准备同步目录（仓库内 .antigravity-sync）',
     '• 启动自动同步',
     '',
     '是否继续？'
@@ -258,6 +278,7 @@ async function configureRepository(
         // URL must be set first (credentials storage depends on URL)
         await configService.setRepositoryUrl(repoUrl);
         await configService.saveCredentials(token);
+        await configService.saveSyncPassword(syncPassword);
 
         progress.report({ message: '初始化同步仓库...' });
         await syncService.initialize();
@@ -280,7 +301,10 @@ async function configureRepository(
     statusBarService?.show();
     sidePanelProvider?.updatePanelData();
   } catch (error) {
+    await configService.deleteSyncPassword();
     await configService.deleteCredentials();
+    await vscode.workspace.getConfiguration('antigravitySync')
+      .update('repositoryUrl', '', vscode.ConfigurationTarget.Global);
     NotificationService.handleSyncError(error as Error);
   }
 }

@@ -1,8 +1,8 @@
 {
   "name": "antigravity-sync-fixed",
   "displayName": "Antigravity 同步与自动重试",
-  "description": "自动同步 AI 上下文 + 自动重试（Auto Retry），减少看护与手动操作。",
-  "version": "0.4.0",
+  "description": "自动同步 AI 上下文 + 自动重试（Auto Retry），减少看护与手动操作。/ Sync AI context + Auto Retry, less babysitting.",
+  "version": "0.4.2",
   "publisher": "LittlePeter52012",
   "author": "LittlePeter52012",
   "icon": "resources/icons/icon.png",
@@ -139,6 +139,16 @@
             "type": "string"
           },
           "description": "在 .gemini 中需要同步的目录"
+        },
+        "antigravitySync.syncRepoSubdir": {
+          "type": "string",
+          "default": ".antigravity-sync",
+          "description": "同步数据在仓库中的子目录（默认 .antigravity-sync，避免影响仓库其他内容）"
+        },
+        "antigravitySync.syncPasswordEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "是否启用同步密码校验（用于设备间验证，不会自动加密仓库内容）"
         },
         "antigravitySync.autoRetryEnabled": {
           "type": "boolean",

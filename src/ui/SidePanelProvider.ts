@@ -57,7 +57,7 @@ export class SidePanelProvider implements vscode.WebviewViewProvider {
           await this.sendConfigState();
           break;
         case 'saveConfig':
-          await this.handleSaveConfig(message.repoUrl, message.pat);
+          await this.handleSaveConfig(message.repoUrl, message.pat, message.syncPassword);
           break;
         case 'syncNow':
           await this.handleSync();
@@ -148,13 +148,13 @@ export class SidePanelProvider implements vscode.WebviewViewProvider {
   /**
    * Handle save config from webview inline form
    */
-  private async handleSaveConfig(repoUrl: string, pat: string): Promise<void> {
+  private async handleSaveConfig(repoUrl: string, pat: string, syncPassword: string): Promise<void> {
     if (!this._view) return;
 
-    if (!repoUrl || !pat) {
+    if (!repoUrl || !pat || !syncPassword) {
       this._view.webview.postMessage({
         type: 'configError',
-        data: { message: '请填写仓库地址和访问令牌' }
+        data: { message: '请填写仓库地址、访问令牌和同步密码' }
       });
       return;
     }
@@ -171,6 +171,10 @@ export class SidePanelProvider implements vscode.WebviewViewProvider {
 
       if (pat.length < 5) {
         throw new Error('访问令牌长度看起来不正确');
+      }
+
+      if (syncPassword.length < 6) {
+        throw new Error('同步密码长度至少 6 位');
       }
 
       // CRITICAL: Check if repo is PUBLIC (reject if accessible without auth)
@@ -202,9 +206,10 @@ export class SidePanelProvider implements vscode.WebviewViewProvider {
       await this._configService.setRepositoryUrl(repoUrl);
       // Now save credentials (uses Git credential manager - persists across workspaces)
       await this._configService.saveCredentials(pat);
+      await this._configService.saveSyncPassword(syncPassword);
 
       // Initialize sync
-      this.sendLog('初始化同步仓库...', 'info');
+      this.sendLog('准备同步目录（仓库内 .antigravity-sync）...', 'info');
       await this._syncService.initialize();
 
       // Wire git logger to UI panel
@@ -230,6 +235,10 @@ export class SidePanelProvider implements vscode.WebviewViewProvider {
     } catch (error) {
       const message = error instanceof Error ? error.message : '配置失败';
       this.sendLog(`连接失败：${message}`, 'error');
+      await this._configService.deleteSyncPassword();
+      await this._configService.deleteCredentials();
+      await vscode.workspace.getConfiguration('antigravitySync')
+        .update('repositoryUrl', '', vscode.ConfigurationTarget.Global);
       this._view.webview.postMessage({
         type: 'configError',
         data: { message }

@@ -31,6 +31,12 @@ export class MainPanel {
             <vscode-text-field id="pat-input" type="password" placeholder="具有仓库访问权限的令牌" class="full-width"></vscode-text-field>
             <span class="hint">令牌需要仓库读写权限</span>
           </div>
+
+          <div class="form-group">
+            <label for="sync-password-input">同步密码</label>
+            <vscode-text-field id="sync-password-input" type="password" placeholder="用于设备间验证" class="full-width"></vscode-text-field>
+            <span class="hint">仅保存在本机，不会上传明文</span>
+          </div>
           
           <vscode-button id="btn-save-config" class="full-width" style="display: flex; justify-content: center; text-align: center;">
             <span id="btn-connect-text" style="width: 100%; text-align: center;">连接仓库</span>
@@ -222,6 +228,7 @@ export class MainPanel {
     document.getElementById('btn-save-config')?.addEventListener('click', () => {
       const repoInput = document.getElementById('repo-url-input') as HTMLInputElement;
       const patInput = document.getElementById('pat-input') as HTMLInputElement;
+      const passwordInput = document.getElementById('sync-password-input') as HTMLInputElement;
 
       // Show loading state
       setConnectLoading(true);
@@ -229,7 +236,8 @@ export class MainPanel {
       vscode.postMessage({
         type: 'saveConfig',
         repoUrl: repoInput?.value || '',
-        pat: patInput?.value || ''
+        pat: patInput?.value || '',
+        syncPassword: passwordInput?.value || ''
       });
     });
 

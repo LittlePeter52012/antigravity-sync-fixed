@@ -5,7 +5,8 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ConfigService } from './ConfigService';
+import * as crypto from 'crypto';
+import { ConfigService, SyncConfig } from './ConfigService';
 import { GitService } from './GitService';
 import { FilterService } from './FilterService';
 import { StatusBarService, SyncState } from './StatusBarService';
@@ -73,6 +74,13 @@ export class SyncService {
       config.excludePatterns,
       config.syncFolders
     );
+
+    // Ensure sync subdir exists and validate sync password
+    const syncDataRoot = this.getSyncDataRoot(config);
+    if (!fs.existsSync(syncDataRoot)) {
+      fs.mkdirSync(syncDataRoot, { recursive: true });
+    }
+    await this.ensureSyncPassword(syncDataRoot, config);
 
     // Copy initial files
     await this.copyFilesToSyncRepo();
@@ -290,7 +298,9 @@ export class SyncService {
     let lastSync: string | null = null;
 
     if (this.gitService) {
-      pendingChanges = await this.gitService.getPendingChangesCount();
+      const changedFiles = await this.gitService.getStatusFiles();
+      const prefix = this.getSyncRepoPrefix(config);
+      pendingChanges = this.filterByPrefix(changedFiles, prefix).length;
       lastSync = await this.gitService.getLastCommitDate();
     }
 
@@ -333,13 +343,16 @@ export class SyncService {
     }
 
     const aheadBehind = await this.gitService.getAheadBehind();
-    const changedFiles = await this.gitService.getChangedFiles(10);
+    const allChanged = await this.gitService.getStatusFiles();
+    const prefix = this.getSyncRepoPrefix(this.configService.getConfig());
+    const filtered = this.filterByPrefix(allChanged, prefix);
+    const files = filtered.slice(0, 10).map(file => this.stripPrefix(file, prefix));
 
     return {
       ahead: aheadBehind.ahead,
       behind: aheadBehind.behind,
-      files: changedFiles.files,
-      totalFiles: changedFiles.total
+      files,
+      totalFiles: filtered.length
     };
   }
 
@@ -349,7 +362,7 @@ export class SyncService {
    */
   private async copyFilesToSyncRepo(): Promise<number> {
     const config = this.configService.getConfig();
-    const syncRepoPath = this.configService.getSyncRepoPath();
+    const syncDataRoot = this.getSyncDataRoot(config);
 
     if (!this.filterService) {
       return 0;
@@ -360,7 +373,7 @@ export class SyncService {
 
     for (const relativePath of filesToSync) {
       const sourcePath = path.join(config.geminiPath, relativePath);
-      const destPath = path.join(syncRepoPath, relativePath);
+      const destPath = path.join(syncDataRoot, relativePath);
 
       // Ensure directory exists
       const destDir = path.dirname(destPath);
@@ -384,10 +397,10 @@ export class SyncService {
    */
   private async copyFilesFromSyncRepo(): Promise<number> {
     const config = this.configService.getConfig();
-    const syncRepoPath = this.configService.getSyncRepoPath();
+    const syncDataRoot = this.getSyncDataRoot(config);
 
-    // Walk sync repo and copy back (excluding .git)
-    return await this.copyDirectoryContents(syncRepoPath, config.geminiPath, ['.git']);
+    // Walk sync subdir and copy back (excluding metadata)
+    return await this.copyDirectoryContents(syncDataRoot, config.geminiPath, ['.sync']);
   }
 
   /**
@@ -427,6 +440,68 @@ export class SyncService {
     }
 
     return count;
+  }
+
+  private getSyncRepoSubdir(config: SyncConfig): string {
+    let subdir = (config.syncRepoSubdir || '.antigravity-sync').trim();
+    if (!subdir || subdir === '.' || subdir === '/' || path.isAbsolute(subdir)) {
+      return '.antigravity-sync';
+    }
+    subdir = subdir.replace(/^[\\/]+/, '').replace(/[\\/]+$/, '');
+    if (subdir.includes('..')) {
+      return '.antigravity-sync';
+    }
+    return subdir;
+  }
+
+  private getSyncDataRoot(config: SyncConfig): string {
+    const subdir = this.getSyncRepoSubdir(config);
+    return path.join(this.configService.getSyncRepoPath(), subdir);
+  }
+
+  private getSyncRepoPrefix(config: SyncConfig): string {
+    const subdir = this.getSyncRepoSubdir(config).replace(/\\/g, '/').replace(/\/+$/, '');
+    return subdir ? `${subdir}/` : '';
+  }
+
+  private filterByPrefix(files: string[], prefix: string): string[] {
+    if (!prefix) return files;
+    return files.filter(file => file.replace(/\\/g, '/').startsWith(prefix));
+  }
+
+  private stripPrefix(file: string, prefix: string): string {
+    if (!prefix) return file;
+    const normalized = file.replace(/\\/g, '/');
+    return normalized.startsWith(prefix) ? normalized.slice(prefix.length) : file;
+  }
+
+  private async ensureSyncPassword(syncDataRoot: string, config: SyncConfig): Promise<void> {
+    if (!config.syncPasswordEnabled) {
+      return;
+    }
+
+    const password = await this.configService.getSyncPassword();
+    if (!password) {
+      throw new Error('同步密码未设置');
+    }
+
+    const hash = crypto.createHash('sha256').update(password).digest('hex');
+    const metaDir = path.join(syncDataRoot, '.sync');
+    const passwordFile = path.join(metaDir, 'password.sha256');
+
+    if (!fs.existsSync(metaDir)) {
+      fs.mkdirSync(metaDir, { recursive: true });
+    }
+
+    if (fs.existsSync(passwordFile)) {
+      const existing = fs.readFileSync(passwordFile, 'utf8').trim();
+      if (existing !== hash) {
+        throw new Error('同步密码不匹配');
+      }
+      return;
+    }
+
+    fs.writeFileSync(passwordFile, `${hash}\n`, { mode: 0o600 });
   }
 
   /**

@@ -18,6 +18,8 @@ export interface SyncConfig {
   excludePatterns: string[];
   geminiPath: string;
   syncFolders: string[];
+  syncPasswordEnabled: boolean;
+  syncRepoSubdir: string;
 }
 
 export class ConfigService {
@@ -42,7 +44,9 @@ export class ConfigService {
       syncFolders: config.get<string[]>(
         'syncFolders',
         ['knowledge', 'brain', 'conversations', 'skills', 'annotations']
-      )
+      ),
+      syncPasswordEnabled: config.get<boolean>('syncPasswordEnabled', false),
+      syncRepoSubdir: config.get<string>('syncRepoSubdir', '.antigravity-sync')
     };
   }
 
@@ -55,7 +59,14 @@ export class ConfigService {
       return false;
     }
     const pat = await this.getCredentials();
-    return !!pat;
+    if (!pat) {
+      return false;
+    }
+    if (config.syncPasswordEnabled) {
+      const password = await this.getSyncPassword();
+      return !!password;
+    }
+    return true;
   }
 
   /**
@@ -103,6 +114,31 @@ export class ConfigService {
     if (config.repositoryUrl) {
       await this.deleteGitCredentials(config.repositoryUrl);
     }
+  }
+
+  /**
+   * Save sync password in VS Code secret storage (local-only)
+   */
+  async saveSyncPassword(password: string): Promise<void> {
+    await this.context.secrets.store('antigravitySync.syncPassword', password);
+    await vscode.workspace.getConfiguration('antigravitySync')
+      .update('syncPasswordEnabled', true, vscode.ConfigurationTarget.Global);
+  }
+
+  /**
+   * Get sync password from VS Code secret storage
+   */
+  async getSyncPassword(): Promise<string | undefined> {
+    return await this.context.secrets.get('antigravitySync.syncPassword');
+  }
+
+  /**
+   * Delete sync password from VS Code secret storage
+   */
+  async deleteSyncPassword(): Promise<void> {
+    await this.context.secrets.delete('antigravitySync.syncPassword');
+    await vscode.workspace.getConfiguration('antigravitySync')
+      .update('syncPasswordEnabled', false, vscode.ConfigurationTarget.Global);
   }
 
   /**

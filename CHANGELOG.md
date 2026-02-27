@@ -20,6 +20,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - 切换仓库后 `origin` 仍指向旧仓库的问题
 
+## [0.4.2] - 2026-02-27
+
+### Added
+- 同步密码校验（设备间验证）
+- 仓库子目录隔离（默认 `.antigravity-sync`）
+
+### Changed
+- 同步改为只影响同步子目录，避免误改仓库其他内容
+
+### Fixed
+- 自动重试“开始/停止”按钮文字换行显示问题
+
 ## [0.3.3] - 2026-01-22
 
 ### Changed
