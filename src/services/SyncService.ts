@@ -202,7 +202,7 @@ export class SyncService {
     try {
       // Pull first to avoid divergent branches (when called standalone)
       console.log('[SyncService.push] 步骤 1：先拉取以避免分支分叉...');
-      await this.gitService.pull();
+      await this.gitService.pull('推送前拉取');
 
       // Copy filtered files to sync repo
       console.log('[SyncService.push] 步骤 2：复制本地文件到同步仓库...');

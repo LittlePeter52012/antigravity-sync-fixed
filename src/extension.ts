@@ -49,7 +49,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     vscode.commands.registerCommand('antigravitySync.syncNow', async () => {
       try {
-        await syncService?.sync();
+        await NotificationService.withProgress('正在同步...', async () => {
+          await syncService?.sync();
+        });
         sidePanelProvider?.updatePanelData();
       } catch (error) {
         NotificationService.handleSyncError(error as Error);
@@ -58,7 +60,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     vscode.commands.registerCommand('antigravitySync.push', async () => {
       try {
-        await syncService?.push();
+        await NotificationService.withProgress('正在推送...', async () => {
+          await syncService?.push();
+        });
         sidePanelProvider?.updatePanelData();
       } catch (error) {
         NotificationService.handleSyncError(error as Error);
@@ -67,7 +71,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     vscode.commands.registerCommand('antigravitySync.pull', async () => {
       try {
-        await syncService?.pull();
+        await NotificationService.withProgress('正在拉取...', async () => {
+          await syncService?.pull();
+        });
         sidePanelProvider?.updatePanelData();
       } catch (error) {
         NotificationService.handleSyncError(error as Error);

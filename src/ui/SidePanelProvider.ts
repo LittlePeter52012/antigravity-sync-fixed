@@ -259,7 +259,9 @@ export class SidePanelProvider implements vscode.WebviewViewProvider {
     this.updateStatus('syncing');
     this.sendLog('正在同步...', 'info');
     try {
-      await this._syncService.sync();
+      await NotificationService.withProgress('正在同步...', async () => {
+        await this._syncService.sync();
+      });
       this.updateStatus('synced');
       this.sendLog('同步完成', 'success');
       await this.sendGitStatus();
@@ -278,7 +280,9 @@ export class SidePanelProvider implements vscode.WebviewViewProvider {
     this.updateStatus('syncing');
     this.sendLog('正在推送...', 'info');
     try {
-      await this._syncService.push();
+      await NotificationService.withProgress('正在推送...', async () => {
+        await this._syncService.push();
+      });
       this.updateStatus('synced');
       this.sendLog('推送完成', 'success');
       await this.sendGitStatus();
@@ -297,7 +301,9 @@ export class SidePanelProvider implements vscode.WebviewViewProvider {
     this.updateStatus('syncing');
     this.sendLog('正在拉取...', 'info');
     try {
-      await this._syncService.pull();
+      await NotificationService.withProgress('正在拉取...', async () => {
+        await this._syncService.pull();
+      });
       this.updateStatus('synced');
       this.sendLog('拉取完成', 'success');
       await this.sendGitStatus();

@@ -771,41 +771,43 @@ export class GitService {
   /**
    * Pull from remote (handles divergent branches with rebase)
    */
-  async pull(): Promise<void> {
-    this.log('[Git 拉取] 开始拉取...');
+  async pull(contextLabel: string = 'Git 拉取'): Promise<void> {
+    const prefix = `[${contextLabel}]`;
+    const logMsg = (msg: string) => this.log(`${prefix} ${msg}`);
+    logMsg('开始拉取...');
     try {
       // Check initial status
       const status = await this.git.status();
       const hasChanges = status.files.length > 0;
       const hasPreExistingConflicts = (status.conflicted?.length || 0) > 0;
-      this.log(`[Git 拉取] 状态：${status.files.length} 个文件，hasChanges=${hasChanges}`);
-      this.log(`[Git 拉取] 冲突文件：${status.conflicted?.length || 0}`);
-      this.log(`[Git 拉取] 已存在冲突：${hasPreExistingConflicts}`);
+      logMsg(`状态：${status.files.length} 个文件，hasChanges=${hasChanges}`);
+      logMsg(`冲突文件：${status.conflicted?.length || 0}`);
+      logMsg(`已存在冲突：${hasPreExistingConflicts}`);
 
       // If there are pre-existing conflicts (ghost conflict state), handle them first
       if (hasPreExistingConflicts) {
-        this.log('[Git 拉取] 检测到已有冲突，进入智能合并...');
+        logMsg('检测到已有冲突，进入智能合并...');
         await this.handleSmartMerge(false); // false = no stash to pop
         return;
       }
 
       if (hasChanges) {
-        this.log('[Git 拉取] 正在暂存本地改动...');
+        logMsg('正在暂存本地改动...');
         await this.git.stash(['push', '-m', 'antigravity-sync-fixed-temp']);
       }
 
       try {
         // Try pull with rebase to handle divergent branches
-        this.log('[Git 拉取] 正在执行 pull --rebase...');
+        logMsg('正在执行 pull --rebase...');
         await this.git.pull('origin', 'main', { '--rebase': 'true' });
-        this.log('[Git 拉取] 拉取成功！');
+        logMsg('拉取成功！');
       } catch (error: unknown) {
         const gitError = error as { message?: string };
-        this.log(`[Git 拉取] 拉取失败：${gitError.message}`);
+        logMsg(`拉取失败：${gitError.message}`);
 
         // Empty repo - no remote branches yet, skip pull
         if (gitError.message?.includes("couldn't find remote ref")) {
-          this.log('[Git 拉取] 远端为空，跳过拉取');
+          logMsg('远端为空，跳过拉取');
           // Pop stash if we had changes
           if (hasChanges) {
             await this.git.stash(['pop']).catch(() => { });
@@ -824,7 +826,7 @@ export class GitService {
           gitError.message?.includes('could not write index') ||
           gitError.message?.includes('index.lock')) {
 
-          this.log(`[Git 拉取] 检测到冲突，进入智能合并（hasChanges=${hasChanges}）...`);
+          logMsg(`检测到冲突，进入智能合并（hasChanges=${hasChanges}）...`);
           await this.handleSmartMerge(hasChanges);
           return;
         }
@@ -840,7 +842,9 @@ export class GitService {
       if (hasChanges) {
         await this.git.stash(['pop']).catch(() => { });
       }
+      logMsg('拉取完成');
     } catch (error) {
+      logMsg(`拉取失败：${(error as Error).message}`);
       throw error;
     }
   }
