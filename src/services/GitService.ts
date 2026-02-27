@@ -4,6 +4,7 @@
 import simpleGit, { SimpleGit, SimpleGitOptions } from 'simple-git';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { getCleanRemoteUrl, normalizeRepoIdentity } from './RepoValidationService';
@@ -542,6 +543,66 @@ export class GitService {
 
     const binaryLikeExtensions = ['.pb', '.pbtxt', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.bin', '.sqlite'];
     this.log('[智能合并] 步骤 6：对差异文件应用智能策略（更新优先）...');
+    const deviceTag = this.getDeviceTag();
+    const conflictStamp = new Date().toISOString().replace(/[:.]/g, '').replace('T', '-').replace('Z', '');
+    const buildConflictPath = (relativePath: string): string => {
+      const parsed = path.parse(relativePath);
+      const suffix = `.conflict-${deviceTag}-${conflictStamp}`;
+      return path.join(this.repoPath, parsed.dir, `${parsed.name}${suffix}${parsed.ext}`);
+    };
+
+    const ensureDir = (filePath: string): void => {
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+    };
+
+    const areContentsEqual = (localPath: string, remoteContent: string): boolean => {
+      try {
+        const localBuffer = fs.readFileSync(localPath);
+        const remoteBuffer = Buffer.from(remoteContent, 'binary');
+        if (localBuffer.length !== remoteBuffer.length) return false;
+        return localBuffer.equals(remoteBuffer);
+      } catch {
+        return false;
+      }
+    };
+
+    const writeConflictCopyFromLocal = (relativePath: string, localPath: string): void => {
+      const conflictPath = buildConflictPath(relativePath);
+      ensureDir(conflictPath);
+      fs.copyFileSync(localPath, conflictPath);
+      this.log(`[智能合并] 已生成冲突副本（本地）：${relativePath}`);
+    };
+
+    const writeConflictCopyFromRemote = (relativePath: string, remoteContent: string): void => {
+      const conflictPath = buildConflictPath(relativePath);
+      ensureDir(conflictPath);
+      fs.writeFileSync(conflictPath, Buffer.from(remoteContent, 'binary'));
+      this.log(`[智能合并] 已生成冲突副本（远端）：${relativePath}`);
+    };
+
+    const getRemoteDeletionTime = async (relativePath: string): Promise<Date | null> => {
+      try {
+        const result = await this.git.raw([
+          'log',
+          '-1',
+          '--format=%ct',
+          '--diff-filter=D',
+          'origin/main',
+          '--',
+          relativePath
+        ]);
+        const trimmed = result.trim();
+        if (!trimmed) return null;
+        const seconds = parseInt(trimmed, 10);
+        if (Number.isNaN(seconds)) return null;
+        return new Date(seconds * 1000);
+      } catch {
+        return null;
+      }
+    };
     for (const file of differingFiles) {
       try {
         // Get local file info
@@ -555,18 +616,38 @@ export class GitService {
         let remoteSize = 0;
         let remoteMtime = new Date(0);
         let remoteExists = false;
+        let remoteContent: string | null = null;
+        let remoteDeletedAt: Date | null = null;
         try {
           const content = await this.git.show([`origin/main:${file}`]);
           remoteSize = Buffer.byteLength(content, 'binary');
           remoteExists = true;
+          remoteContent = content;
         } catch {
           remoteExists = false;
         }
 
         try {
-          const log = await this.git.log({ file, maxCount: 1 });
-          if (log.latest?.date) remoteMtime = new Date(log.latest.date);
+          const log = await this.git.raw(['log', '-1', '--format=%ct', 'origin/main', '--', file]);
+          const trimmed = log.trim();
+          if (trimmed) {
+            const seconds = parseInt(trimmed, 10);
+            if (!Number.isNaN(seconds)) {
+              remoteMtime = new Date(seconds * 1000);
+            }
+          }
         } catch { /* ignore */ }
+
+        if (!remoteExists) {
+          remoteDeletedAt = await getRemoteDeletionTime(file);
+          if (remoteDeletedAt) {
+            remoteMtime = remoteDeletedAt;
+          }
+        }
+
+        const contentEqual = localExists && remoteExists && remoteContent !== null && localSize === remoteSize
+          ? areContentsEqual(localFilePath, remoteContent)
+          : false;
 
         const isBinaryLike = binaryLikeExtensions.some(ext => file.toLowerCase().endsWith(ext));
         const sizeDiffRatio = Math.max(localSize, remoteSize) > 0
@@ -583,6 +664,7 @@ export class GitService {
           keepLocal = false;
           this.log(`[智能合并] ${file}: 本地不存在 → 保留远端`);
         } else if (!remoteExists) {
+          // Remote deleted: compare deletion time with local mtime
           keepLocal = localMtime >= remoteMtime;
           this.log(`[智能合并] ${file}: 远端不存在 → 按时间保留${keepLocal ? '本地' : '远端'}（更新优先）`);
         } else if (isBinaryLike) {
@@ -598,7 +680,16 @@ export class GitService {
           this.log(`[智能合并] ${file}: 文本文件 → 保留${keepLocal ? '本地' : '远端'}（更新优先）`);
         }
 
+        const isDifferent = !contentEqual;
+        if (!isDifferent) {
+          this.log(`[智能合并] ${file}: 内容一致，跳过`);
+          continue;
+        }
+
         if (!keepLocal) {
+          if (localExists && isDifferent) {
+            writeConflictCopyFromLocal(file, localFilePath);
+          }
           if (remoteExists) {
             this.log(`[智能合并] 正在检出远端版本：${file}...`);
             await this.git.raw(['checkout', 'origin/main', '--', file]).catch(e =>
@@ -609,6 +700,17 @@ export class GitService {
             try {
               fs.unlinkSync(localFilePath);
             } catch { /* ignore */ }
+          }
+        } else if (remoteExists && isDifferent) {
+          if (!remoteContent) {
+            try {
+              remoteContent = await this.git.show([`origin/main:${file}`]);
+            } catch {
+              remoteContent = null;
+            }
+          }
+          if (remoteContent) {
+            writeConflictCopyFromRemote(file, remoteContent);
           }
         }
       } catch (err) {
@@ -638,6 +740,11 @@ export class GitService {
     this.log(`[智能合并] 推送结果：${JSON.stringify(pushResult)}`);
 
     this.log('[智能合并] === 智能合并完成 ===');
+  }
+
+  private getDeviceTag(): string {
+    const hostname = os.hostname() || 'device';
+    return hostname.replace(/[^a-zA-Z0-9_.-]/g, '_').slice(0, 32);
   }
 
   /**

@@ -5,20 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.0] - 2026-02-27
-
-### Added
-- 默认同步目录新增 `skills/`、`annotations/`
-- 同步开关生效（禁用后不再自动同步）
+## [0.4.5] - 2026-02-27
 
 ### Changed
-- 插件身份、仓库链接更新为私有化版本
-- 配置流程统一校验（私有仓库、令牌权限）
-- 面板/通知/状态栏全面中文化
-- 自动同步间隔改为读取配置值
-
-### Fixed
-- 切换仓库后 `origin` 仍指向旧仓库的问题
+- 智能合并策略升级为“云盘式冲突副本”：保留较新版本，旧版本以 `.conflict-设备-时间戳` 形式保留
+- 内容一致时跳过处理，减少无谓冲突
 
 ## [0.4.4] - 2026-02-27
 
@@ -44,6 +35,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - 自动重试“开始/停止”按钮文字换行显示问题
+
+## [0.4.0] - 2026-02-27
+
+### Added
+- 默认同步目录新增 `skills/`、`annotations/`
+- 同步开关生效（禁用后不再自动同步）
+
+### Changed
+- 插件身份、仓库链接更新为私有化版本
+- 配置流程统一校验（私有仓库、令牌权限）
+- 面板/通知/状态栏全面中文化
+- 自动同步间隔改为读取配置值
+
+### Fixed
+- 切换仓库后 `origin` 仍指向旧仓库的问题
 
 ## [0.3.3] - 2026-01-22
 
