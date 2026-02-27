@@ -46,6 +46,7 @@
 **检查更新（GitHub Release）：**
 - 命令面板运行：`Antigravity 同步：检查更新`
 - 或在面板「仓库」栏点击“检查更新”
+ - 启动后可自动检查（设置：`antigravitySync.autoCheckUpdates`）
 
 **为什么没有“点更新”？**
 - 只有从 Marketplace / Open VSX 安装，才会出现 **Update / 更新**。
@@ -63,6 +64,7 @@
 - `antigravitySync.syncFolders`：同步目录
 - `antigravitySync.syncRepoSubdir`：仓库内同步子目录（默认 `.antigravity-sync`）
 - `antigravitySync.syncPasswordEnabled`：是否启用同步密码校验
+- `antigravitySync.autoCheckUpdates`：启动后自动检查更新
 
 ---
 

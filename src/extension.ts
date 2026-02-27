@@ -107,6 +107,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   }
 
+  // Auto-check updates (optional)
+  setTimeout(() => {
+    void autoCheckForUpdates(context);
+  }, 4000);
+
   // Auto-start Auto Retry if enabled
   const config = vscode.workspace.getConfiguration('antigravitySync');
   if (config.get('autoStartRetry', false)) {
@@ -131,65 +136,121 @@ export function deactivate(): void {
 }
 
 async function checkForUpdates(context: vscode.ExtensionContext): Promise<void> {
+  await checkForUpdatesInternal(context, { silent: false, trigger: 'manual' });
+}
+
+async function autoCheckForUpdates(context: vscode.ExtensionContext): Promise<void> {
+  const config = vscode.workspace.getConfiguration('antigravitySync');
+  if (!config.get('autoCheckUpdates', true)) {
+    return;
+  }
+
+  const now = Date.now();
+  const lastCheck = context.globalState.get<number>('antigravitySync.lastUpdateCheck', 0);
+  const intervalMs = 12 * 60 * 60 * 1000; // 12 hours
+  if (now - lastCheck < intervalMs) {
+    return;
+  }
+
+  await context.globalState.update('antigravitySync.lastUpdateCheck', now);
+  await checkForUpdatesInternal(context, { silent: true, trigger: 'auto' });
+}
+
+async function checkForUpdatesInternal(
+  context: vscode.ExtensionContext,
+  options: { silent: boolean; trigger: 'manual' | 'auto' }
+): Promise<void> {
   const updateService = new UpdateService(context);
   const currentVersion = updateService.getCurrentVersion();
 
   try {
     const latest = await updateService.getLatestRelease();
     if (!latest.version) {
-      await NotificationService.info('未找到可用的更新版本');
+      if (!options.silent) {
+        await NotificationService.info('未找到可用的更新版本');
+      }
       return;
     }
 
     const compare = compareVersions(latest.version, currentVersion);
     if (compare <= 0) {
-      await NotificationService.info(`已是最新版本（${currentVersion}）`);
+      if (!options.silent) {
+        await NotificationService.info(`已是最新版本（${currentVersion}）`);
+      }
       return;
     }
 
-    const choice = await vscode.window.showInformationMessage(
-      `发现新版本 v${latest.version}（当前 v${currentVersion}）`,
-      { modal: true },
-      '下载并安装',
-      '打开发布页'
-    );
-
-    if (choice === '打开发布页') {
-      void vscode.env.openExternal(vscode.Uri.parse(latest.htmlUrl));
+    const skipped = context.globalState.get<string>('antigravitySync.skipVersion', '');
+    if (options.silent && skipped === latest.version) {
       return;
     }
 
-    if (choice !== '下载并安装') {
-      return;
-    }
-
-    if (!latest.assetUrl || !latest.assetName) {
-      await NotificationService.error('未找到可安装的 VSIX', {
-        detail: '请打开发布页手动下载 VSIX。',
-        actions: [
-          { title: '打开发布页', action: () => void vscode.env.openExternal(vscode.Uri.parse(latest.htmlUrl)) }
-        ]
-      });
-      return;
-    }
-
-    await NotificationService.withProgress('正在下载更新...', async (progress) => {
-      progress.report({ message: '下载 VSIX...' });
-      const vsixPath = await updateService.downloadVsix(latest.assetUrl!, latest.assetName!);
-      progress.report({ message: '安装中...' });
-      await vscode.commands.executeCommand('workbench.extensions.installExtension', vscode.Uri.file(vsixPath));
-    });
-
-    const reload = await vscode.window.showInformationMessage(
-      '更新已安装，是否立即重载窗口？',
-      '立即重载'
-    );
-    if (reload === '立即重载') {
-      void vscode.commands.executeCommand('workbench.action.reloadWindow');
-    }
+    await promptInstallUpdate(context, updateService, latest, currentVersion, options.trigger);
   } catch (error) {
+    if (options.silent) {
+      return;
+    }
     const message = error instanceof Error ? error.message : '检查更新失败';
     await NotificationService.error('检查更新失败', { detail: message });
+  }
+}
+
+async function promptInstallUpdate(
+  context: vscode.ExtensionContext,
+  updateService: UpdateService,
+  latest: { version: string; htmlUrl: string; assetUrl?: string; assetName?: string },
+  currentVersion: string,
+  trigger: 'manual' | 'auto'
+): Promise<void> {
+  const title = trigger === 'auto'
+    ? `发现新版本 v${latest.version}（自动检查）`
+    : `发现新版本 v${latest.version}（当前 v${currentVersion}）`;
+
+  const choice = await vscode.window.showInformationMessage(
+    title,
+    { modal: trigger === 'manual' },
+    '下载并安装',
+    '打开发布页',
+    '忽略此版本'
+  );
+
+  if (choice === '忽略此版本') {
+    await context.globalState.update('antigravitySync.skipVersion', latest.version);
+    return;
+  }
+
+  if (choice === '打开发布页') {
+    void vscode.env.openExternal(vscode.Uri.parse(latest.htmlUrl));
+    return;
+  }
+
+  if (choice !== '下载并安装') {
+    return;
+  }
+
+  if (!latest.assetUrl || !latest.assetName) {
+    await NotificationService.error('未找到可安装的 VSIX', {
+      detail: '请打开发布页手动下载 VSIX。',
+      actions: [
+        { title: '打开发布页', action: () => void vscode.env.openExternal(vscode.Uri.parse(latest.htmlUrl)) }
+      ]
+    });
+    return;
+  }
+
+  await NotificationService.withProgress('正在下载更新...', async (progress) => {
+    progress.report({ message: '下载 VSIX...' });
+    const vsixPath = await updateService.downloadVsix(latest.assetUrl!, latest.assetName!);
+    progress.report({ message: '安装中...' });
+    await vscode.commands.executeCommand('workbench.extensions.installExtension', vscode.Uri.file(vsixPath));
+  });
+
+  const reload = await vscode.window.showInformationMessage(
+    '更新已安装，是否立即重载窗口？',
+    '立即重载'
+  );
+  if (reload === '立即重载') {
+    void vscode.commands.executeCommand('workbench.action.reloadWindow');
   }
 }
 

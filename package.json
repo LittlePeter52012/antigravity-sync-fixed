@@ -2,7 +2,7 @@
   "name": "antigravity-sync-fixed",
   "displayName": "Antigravity 同步与自动重试",
   "description": "自动同步 AI 上下文 + 自动重试（Auto Retry），减少看护与手动操作。/ Sync AI context + Auto Retry, less babysitting.",
-  "version": "0.4.7",
+  "version": "0.4.8",
   "publisher": "LittlePeter52012",
   "author": "LittlePeter52012",
   "icon": "resources/icons/icon.png",
@@ -154,6 +154,11 @@
           "type": "string",
           "default": ".antigravity-sync",
           "description": "同步数据在仓库中的子目录（默认 .antigravity-sync，避免影响仓库其他内容）"
+        },
+        "antigravitySync.autoCheckUpdates": {
+          "type": "boolean",
+          "default": true,
+          "description": "启动后自动检查 GitHub Release 更新"
         },
         "antigravitySync.updateRepo": {
           "type": "string",
