@@ -16,6 +16,7 @@ export interface SyncConfig {
   syncIntervalMinutes: number;
   excludePatterns: string[];
   geminiPath: string;
+  syncFolders: string[];
 }
 
 export class ConfigService {
@@ -35,7 +36,8 @@ export class ConfigService {
       autoSync: config.get<boolean>('autoSync', true),
       syncIntervalMinutes: config.get<number>('syncIntervalMinutes', 5),
       excludePatterns: config.get<string[]>('excludePatterns', []),
-      geminiPath: config.get<string>('geminiPath', '') || this.getDefaultGeminiPath()
+      geminiPath: config.get<string>('geminiPath', '') || this.getDefaultGeminiPath(),
+      syncFolders: config.get<string[]>('syncFolders', ['knowledge'])
     };
   }
 

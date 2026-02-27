@@ -8,6 +8,7 @@ import ignore, { Ignore } from 'ignore';
 export class FilterService {
   private ig: Ignore;
   private geminiPath: string;
+  private syncFolders: string[];
 
   // Default patterns that MUST always be excluded
   private static readonly DEFAULT_EXCLUDES = [
@@ -51,8 +52,9 @@ export class FilterService {
     '.git/'
   ];
 
-  constructor(geminiPath: string, customPatterns: string[] = []) {
+  constructor(geminiPath: string, customPatterns: string[] = [], syncFolders: string[] = []) {
     this.geminiPath = geminiPath;
+    this.syncFolders = syncFolders;
     this.ig = ignore();
 
     // Add default excludes
@@ -105,7 +107,20 @@ export class FilterService {
    */
   async getFilesToSync(): Promise<string[]> {
     const files: string[] = [];
-    await this.walkDirectory(this.geminiPath, '', files);
+
+    if (this.syncFolders.length > 0) {
+      // Only walk specified sync folders
+      for (const folder of this.syncFolders) {
+        const folderPath = path.join(this.geminiPath, folder);
+        if (fs.existsSync(folderPath)) {
+          await this.walkDirectory(this.geminiPath, folder, files);
+        }
+      }
+    } else {
+      // Fallback: walk entire geminiPath (backward compatible)
+      await this.walkDirectory(this.geminiPath, '', files);
+    }
+
     return files;
   }
 

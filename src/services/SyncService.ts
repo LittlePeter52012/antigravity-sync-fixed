@@ -73,7 +73,8 @@ export class SyncService {
     // Initialize filter service
     this.filterService = new FilterService(
       config.geminiPath,
-      config.excludePatterns
+      config.excludePatterns,
+      config.syncFolders
     );
 
     // Copy initial files

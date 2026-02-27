@@ -150,7 +150,7 @@ async function configureRepository(
 
   // Step 2: Get access token
   const token = await vscode.window.showInputBox({
-    title: 'Step 1/3: Git Access Token',
+    title: 'Step 1/2: Git Access Token',
     prompt: 'Enter your access token (PAT for GitHub/GitLab, App Password for Bitbucket)',
     password: true,
     placeHolder: 'Your access token with repo access',
@@ -169,7 +169,7 @@ async function configureRepository(
 
   // Step 3: Get repository URL
   const repoUrl = await vscode.window.showInputBox({
-    title: 'Step 2/3: Private Repository URL',
+    title: 'Step 2/2: Private Repository URL',
     prompt: 'Enter your PRIVATE repository URL (GitHub, GitLab, Bitbucket, etc.)',
     placeHolder: 'https://github.com/user/repo or https://gitlab.com/user/repo',
     ignoreFocusOut: true,
@@ -185,19 +185,43 @@ async function configureRepository(
     return;
   }
 
-  // Step 4: Validate and save
+  // Step 4: Confirmation dialog
+  const confirmMessage = [
+    `Repository: ${repoUrl}`,
+    '',
+    'The extension will now:',
+    '• Validate your access token',
+    '• Initialize the sync repository',
+    '• Start auto-syncing your Gemini context',
+    '',
+    'Continue?'
+  ].join('\n');
+
+  const confirm = await vscode.window.showInformationMessage(
+    confirmMessage,
+    { modal: true },
+    'Confirm & Connect'
+  );
+
+  if (confirm !== 'Confirm & Connect') {
+    return;
+  }
+
+  // Step 5: Validate and save
   try {
     await NotificationService.withProgress(
-      'Validating repository...',
+      'Connecting to repository...',
       async (progress) => {
-        progress.report({ message: 'Checking repository...' });
+        progress.report({ message: 'Validating access token...' });
 
         // URL must be set first (credentials storage depends on URL)
         await configService.setRepositoryUrl(repoUrl);
         await configService.saveCredentials(token);
 
-        progress.report({ message: 'Initializing sync...' });
+        progress.report({ message: 'Initializing sync repository...' });
         await syncService.initialize();
+
+        progress.report({ message: 'Starting auto-sync...' });
       }
     );
 

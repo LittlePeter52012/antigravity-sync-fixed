@@ -30,7 +30,7 @@ export class WatcherService {
     // Ignored patterns for chokidar (don't even watch these)
     const ignored = [
       '**/browser_recordings/**',
-      '**/*.pb',
+      '**/user_settings.pb',
       '**/node_modules/**',
       '**/.git/**',
       '**/google_accounts.json',
