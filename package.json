@@ -2,7 +2,7 @@
   "name": "antigravity-sync-fixed",
   "displayName": "Antigravity 同步与自动重试",
   "description": "自动同步 AI 上下文 + 自动重试（Auto Retry），减少看护与手动操作。/ Sync AI context + Auto Retry, less babysitting.",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "publisher": "LittlePeter52012",
   "author": "LittlePeter52012",
   "icon": "resources/icons/icon.png",

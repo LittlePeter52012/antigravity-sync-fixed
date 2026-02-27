@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - 切换仓库后 `origin` 仍指向旧仓库的问题
 
+## [0.4.4] - 2026-02-27
+
+### Changed
+- 智能合并策略升级：对所有差异文件采用“更新优先/大小优先”决策，降低多设备冲突
+- 远端删除按时间决策，避免误复活旧文件
+
 ## [0.4.3] - 2026-02-27
 
 ### Changed

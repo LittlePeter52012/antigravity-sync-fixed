@@ -540,13 +540,9 @@ export class GitService {
       differingFiles = [];
     }
 
-    const binaryExtensions = ['.pb', '.pbtxt', '.png', '.jpg', '.webp', '.gif'];
-    const binaryFiles = differingFiles.filter(f => binaryExtensions.some(ext => f.endsWith(ext)));
-    this.log(`[智能合并] 发现 ${binaryFiles.length} 个二进制文件需要处理`);
-
-    // Step 6: For binary files, apply Smart Resolution
-    this.log('[智能合并] 步骤 6：对二进制文件应用智能策略...');
-    for (const file of binaryFiles) {
+    const binaryLikeExtensions = ['.pb', '.pbtxt', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.bin', '.sqlite'];
+    this.log('[智能合并] 步骤 6：对差异文件应用智能策略（更新优先）...');
+    for (const file of differingFiles) {
       try {
         // Get local file info
         const localFilePath = path.join(this.repoPath, file);
@@ -558,35 +554,63 @@ export class GitService {
         // Get remote file info
         let remoteSize = 0;
         let remoteMtime = new Date(0);
+        let remoteExists = false;
         try {
           const content = await this.git.show([`origin/main:${file}`]);
           remoteSize = Buffer.byteLength(content, 'binary');
+          remoteExists = true;
+        } catch {
+          remoteExists = false;
+        }
+
+        try {
           const log = await this.git.log({ file, maxCount: 1 });
           if (log.latest?.date) remoteMtime = new Date(log.latest.date);
-        } catch { /* remote might not have file */ }
+        } catch { /* ignore */ }
 
-        // Decide: larger wins if diff > 20%, else newer wins
+        const isBinaryLike = binaryLikeExtensions.some(ext => file.toLowerCase().endsWith(ext));
         const sizeDiffRatio = Math.max(localSize, remoteSize) > 0
           ? Math.abs(localSize - remoteSize) / Math.max(localSize, remoteSize)
           : 0;
 
         let keepLocal: boolean;
-        if (sizeDiffRatio > 0.2) {
-          keepLocal = localSize >= remoteSize;
-          this.log(`[智能合并] ${file}: 大小 ${localSize} vs ${remoteSize}（${(sizeDiffRatio * 100).toFixed(0)}%）→ 保留${keepLocal ? '本地' : '远端'}（更大）`);
-        } else {
-          keepLocal = localMtime >= remoteMtime;
-          this.log(`[智能合并] ${file}: 大小接近 → 保留${keepLocal ? '本地' : '远端'}（更新）`);
+
+        if (!localExists && !remoteExists) {
+          continue;
         }
 
-        // If remote wins, checkout remote version
-        if (!keepLocal) {
-          this.log(`[智能合并] 正在检出远端版本：${file}...`);
-          await this.git.raw(['checkout', 'origin/main', '--', file]).catch(e =>
-            this.log(`[智能合并] 检出失败：${e.message}`)
-          );
+        if (!localExists) {
+          keepLocal = false;
+          this.log(`[智能合并] ${file}: 本地不存在 → 保留远端`);
+        } else if (!remoteExists) {
+          keepLocal = localMtime >= remoteMtime;
+          this.log(`[智能合并] ${file}: 远端不存在 → 按时间保留${keepLocal ? '本地' : '远端'}（更新优先）`);
+        } else if (isBinaryLike) {
+          if (sizeDiffRatio > 0.2) {
+            keepLocal = localSize >= remoteSize;
+            this.log(`[智能合并] ${file}: 大小 ${localSize} vs ${remoteSize}（${(sizeDiffRatio * 100).toFixed(0)}%）→ 保留${keepLocal ? '本地' : '远端'}（更大）`);
+          } else {
+            keepLocal = localMtime >= remoteMtime;
+            this.log(`[智能合并] ${file}: 大小接近 → 保留${keepLocal ? '本地' : '远端'}（更新优先）`);
+          }
+        } else {
+          keepLocal = localMtime >= remoteMtime;
+          this.log(`[智能合并] ${file}: 文本文件 → 保留${keepLocal ? '本地' : '远端'}（更新优先）`);
         }
-        // If local wins, keep current file (do nothing)
+
+        if (!keepLocal) {
+          if (remoteExists) {
+            this.log(`[智能合并] 正在检出远端版本：${file}...`);
+            await this.git.raw(['checkout', 'origin/main', '--', file]).catch(e =>
+              this.log(`[智能合并] 检出失败：${e.message}`)
+            );
+          } else if (localExists) {
+            this.log(`[智能合并] 正在删除本地文件（远端已删除）：${file}...`);
+            try {
+              fs.unlinkSync(localFilePath);
+            } catch { /* ignore */ }
+          }
+        }
       } catch (err) {
         this.log(`[智能合并] 处理 ${file} 出错：${(err as Error).message}`);
       }
