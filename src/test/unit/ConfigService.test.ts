@@ -112,22 +112,39 @@ describe('ConfigService', () => {
 
   describe('credentials', () => {
     it('should save credentials securely', async () => {
+      mockConfig.get.mockImplementation((key: string, defaultValue: any) => {
+        if (key === 'repositoryUrl') return 'https://github.com/user/repo';
+        return defaultValue;
+      });
+      (configService as any).storeGitCredentials = jest.fn().mockResolvedValue(undefined);
+
       await configService.saveCredentials('ghp_test_token');
-      expect(mockSecrets.store).toHaveBeenCalledWith(
-        'antigravitySync.gitToken',
+      expect((configService as any).storeGitCredentials).toHaveBeenCalledWith(
+        'https://github.com/user/repo',
         'ghp_test_token'
       );
     });
 
     it('should retrieve credentials', async () => {
-      mockSecrets.get.mockResolvedValue('ghp_stored_token');
+      mockConfig.get.mockImplementation((key: string) => {
+        if (key === 'repositoryUrl') return 'https://github.com/user/repo';
+        return '';
+      });
+      (configService as any).getGitCredentials = jest.fn().mockResolvedValue('ghp_stored_token');
       const result = await configService.getCredentials();
       expect(result).toBe('ghp_stored_token');
     });
 
     it('should delete credentials', async () => {
+      mockConfig.get.mockImplementation((key: string) => {
+        if (key === 'repositoryUrl') return 'https://github.com/user/repo';
+        return '';
+      });
+      (configService as any).deleteGitCredentials = jest.fn().mockResolvedValue(undefined);
       await configService.deleteCredentials();
-      expect(mockSecrets.delete).toHaveBeenCalledWith('antigravitySync.gitToken');
+      expect((configService as any).deleteGitCredentials).toHaveBeenCalledWith(
+        'https://github.com/user/repo'
+      );
     });
   });
 });
