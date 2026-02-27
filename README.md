@@ -1,6 +1,6 @@
 # Antigravity Sync - Retry
 
-> 🇻🇳 **Người dùng Việt Nam:** Xem [README tiếng Việt](README_VI.md) để có hướng dẫn chi tiết bằng tiếng Việt.
+
 
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/mrd9999.antigravity-sync.svg)](https://marketplace.visualstudio.com/items?itemName=mrd9999.antigravity-sync)
 [![Open VSX](https://img.shields.io/open-vsx/v/mrd9999/antigravity-sync)](https://open-vsx.org/extension/mrd9999/antigravity-sync)
