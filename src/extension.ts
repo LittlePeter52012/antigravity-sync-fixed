@@ -10,7 +10,8 @@ import { WatcherService } from './services/WatcherService';
 import { NotificationService } from './services/NotificationService';
 import { SidePanelProvider } from './ui/SidePanelProvider';
 import { GitService } from './services/GitService';
-import { checkIsPublicRepo, isUpstreamRepo, validateGitRepoUrl } from './services/RepoValidationService';
+import { checkIsPublicRepo, isUpstreamRepo, normalizeRepoIdentity, validateGitRepoUrl } from './services/RepoValidationService';
+import { UpdateService } from './services/UpdateService';
 
 let syncService: SyncService | undefined;
 let watcherService: WatcherService | undefined;
@@ -81,6 +82,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       vscode.commands.executeCommand('antigravity-sync-fixed.focus');
     }),
 
+    vscode.commands.registerCommand('antigravitySync.checkUpdates', async () => {
+      await checkForUpdates(context);
+    }),
+
+    vscode.commands.registerCommand('antigravitySync.resetSyncPassword', async () => {
+      await resetSyncPasswordFlow(context, configService, syncService!);
+    }),
+
     statusBarService.getStatusBarItem()
   );
 
@@ -119,6 +128,216 @@ export function deactivate(): void {
   watcherService?.stop();
   statusBarService?.hide();
   console.log('Antigravity 同步与自动重试已停用');
+}
+
+async function checkForUpdates(context: vscode.ExtensionContext): Promise<void> {
+  const updateService = new UpdateService(context);
+  const currentVersion = updateService.getCurrentVersion();
+
+  try {
+    const latest = await updateService.getLatestRelease();
+    if (!latest.version) {
+      await NotificationService.info('未找到可用的更新版本');
+      return;
+    }
+
+    const compare = compareVersions(latest.version, currentVersion);
+    if (compare <= 0) {
+      await NotificationService.info(`已是最新版本（${currentVersion}）`);
+      return;
+    }
+
+    const choice = await vscode.window.showInformationMessage(
+      `发现新版本 v${latest.version}（当前 v${currentVersion}）`,
+      { modal: true },
+      '下载并安装',
+      '打开发布页'
+    );
+
+    if (choice === '打开发布页') {
+      void vscode.env.openExternal(vscode.Uri.parse(latest.htmlUrl));
+      return;
+    }
+
+    if (choice !== '下载并安装') {
+      return;
+    }
+
+    if (!latest.assetUrl || !latest.assetName) {
+      await NotificationService.error('未找到可安装的 VSIX', {
+        detail: '请打开发布页手动下载 VSIX。',
+        actions: [
+          { title: '打开发布页', action: () => void vscode.env.openExternal(vscode.Uri.parse(latest.htmlUrl)) }
+        ]
+      });
+      return;
+    }
+
+    await NotificationService.withProgress('正在下载更新...', async (progress) => {
+      progress.report({ message: '下载 VSIX...' });
+      const vsixPath = await updateService.downloadVsix(latest.assetUrl!, latest.assetName!);
+      progress.report({ message: '安装中...' });
+      await vscode.commands.executeCommand('workbench.extensions.installExtension', vscode.Uri.file(vsixPath));
+    });
+
+    const reload = await vscode.window.showInformationMessage(
+      '更新已安装，是否立即重载窗口？',
+      '立即重载'
+    );
+    if (reload === '立即重载') {
+      void vscode.commands.executeCommand('workbench.action.reloadWindow');
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '检查更新失败';
+    await NotificationService.error('检查更新失败', { detail: message });
+  }
+}
+
+async function resetSyncPasswordFlow(
+  context: vscode.ExtensionContext,
+  configService: ConfigService,
+  syncService: SyncService
+): Promise<void> {
+  const config = configService.getConfig();
+  if (!config.repositoryUrl) {
+    await NotificationService.error('尚未配置仓库', {
+      detail: '请先完成仓库配置。',
+      actions: [
+        { title: '立即配置', action: () => void vscode.commands.executeCommand('antigravitySync.configure') }
+      ]
+    });
+    return;
+  }
+
+  const warning = await vscode.window.showWarningMessage(
+    '重置同步密码需要重新设置所有设备的密码。为避免误操作，请按提示确认。',
+    { modal: true },
+    '继续'
+  );
+  if (warning !== '继续') {
+    return;
+  }
+
+  const confirmText = await vscode.window.showInputBox({
+    title: '确认重置',
+    prompt: '请输入 RESET 继续',
+    placeHolder: 'RESET',
+    ignoreFocusOut: true,
+    validateInput: (value) => {
+      if (!value || value.trim().toUpperCase() !== 'RESET') {
+        return '请输入 RESET 以继续';
+      }
+      return undefined;
+    }
+  });
+  if (!confirmText) {
+    return;
+  }
+
+  const repoConfirm = await vscode.window.showInputBox({
+    title: '确认仓库地址',
+    prompt: '请再次输入仓库地址以确认',
+    placeHolder: config.repositoryUrl,
+    ignoreFocusOut: true,
+    validateInput: (value) => {
+      const original = normalizeRepoIdentity(config.repositoryUrl);
+      const input = normalizeRepoIdentity(value || '');
+      if (!input || !original) {
+        return '请输入有效的仓库地址';
+      }
+      if (input.host !== original.host || input.path !== original.path) {
+        return '仓库地址不匹配';
+      }
+      return undefined;
+    }
+  });
+  if (!repoConfirm) {
+    return;
+  }
+
+  const token = await vscode.window.showInputBox({
+    title: '验证访问权限',
+    prompt: '请输入访问令牌以确认权限',
+    password: true,
+    placeHolder: '具有仓库访问权限的令牌',
+    ignoreFocusOut: true,
+    validateInput: (value) => {
+      if (!value || value.length < 8) {
+        return '请输入有效的访问令牌';
+      }
+      return undefined;
+    }
+  });
+  if (!token) {
+    return;
+  }
+
+  const newPassword = await vscode.window.showInputBox({
+    title: '设置新同步密码',
+    prompt: '请输入新的同步密码（用于设备间验证）',
+    password: true,
+    placeHolder: '至少 6 位',
+    ignoreFocusOut: true,
+    validateInput: (value) => {
+      if (!value || value.length < 6) {
+        return '同步密码长度至少 6 位';
+      }
+      return undefined;
+    }
+  });
+  if (!newPassword) {
+    return;
+  }
+
+  const confirmPassword = await vscode.window.showInputBox({
+    title: '确认新同步密码',
+    prompt: '请再次输入同步密码以确认',
+    password: true,
+    placeHolder: '与上一步保持一致',
+    ignoreFocusOut: true,
+    validateInput: (value) => {
+      if (!value || value.length < 6) {
+        return '同步密码长度至少 6 位';
+      }
+      if (value !== newPassword) {
+        return '两次输入的同步密码不一致';
+      }
+      return undefined;
+    }
+  });
+  if (!confirmPassword) {
+    return;
+  }
+
+  try {
+    await NotificationService.withProgress('正在重置同步密码...', async (progress) => {
+      progress.report({ message: '验证访问权限...' });
+      const tempGitService = new GitService(configService.getSyncRepoPath());
+      await tempGitService.verifyAccess(config.repositoryUrl, token);
+
+      progress.report({ message: '写入新密码并推送...' });
+      await syncService.resetSyncPassword(newPassword, token);
+      await configService.saveSyncPassword(newPassword);
+    });
+
+    await NotificationService.info('同步密码已重置，请在其他设备输入新密码');
+  } catch (error) {
+    NotificationService.handleSyncError(error as Error);
+  }
+}
+
+function compareVersions(a: string, b: string): number {
+  const parse = (v: string) => v.split('.').map(x => parseInt(x, 10) || 0);
+  const pa = parse(a);
+  const pb = parse(b);
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i++) {
+    const da = pa[i] || 0;
+    const db = pb[i] || 0;
+    if (da > db) return 1;
+    if (da < db) return -1;
+  }
+  return 0;
 }
 
 /**

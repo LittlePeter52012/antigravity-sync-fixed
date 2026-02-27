@@ -2,7 +2,7 @@
   "name": "antigravity-sync-fixed",
   "displayName": "Antigravity 同步与自动重试",
   "description": "自动同步 AI 上下文 + 自动重试（Auto Retry），减少看护与手动操作。/ Sync AI context + Auto Retry, less babysitting.",
-  "version": "0.4.6",
+  "version": "0.4.7",
   "publisher": "LittlePeter52012",
   "author": "LittlePeter52012",
   "icon": "resources/icons/icon.png",
@@ -68,6 +68,16 @@
         "command": "antigravitySync.openPanel",
         "title": "Antigravity 同步：打开面板",
         "icon": "$(window)"
+      },
+      {
+        "command": "antigravitySync.checkUpdates",
+        "title": "Antigravity 同步：检查更新",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "antigravitySync.resetSyncPassword",
+        "title": "Antigravity 同步：重置同步密码",
+        "icon": "$(key)"
       }
     ],
     "viewsContainers": {
@@ -144,6 +154,11 @@
           "type": "string",
           "default": ".antigravity-sync",
           "description": "同步数据在仓库中的子目录（默认 .antigravity-sync，避免影响仓库其他内容）"
+        },
+        "antigravitySync.updateRepo": {
+          "type": "string",
+          "default": "LittlePeter52012/antigravity-sync-fixed",
+          "description": "用于检查更新的 GitHub 仓库（owner/repo）"
         },
         "antigravitySync.syncPasswordEnabled": {
           "type": "boolean",

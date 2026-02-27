@@ -43,12 +43,17 @@
 **VSIX 安装：**
 - Extensions → `...` → **Install from VSIX...** → 选择 `.vsix` → Reload
 
+**检查更新（GitHub Release）：**
+- 命令面板运行：`Antigravity 同步：检查更新`
+- 或在面板「仓库」栏点击“检查更新”
+
 **为什么没有“点更新”？**
 - 只有从 Marketplace / Open VSX 安装，才会出现 **Update / 更新**。
 
 **Update (English):**
 - Install via VSIX: Extensions → `...` → **Install from VSIX...** → Reload
 - One‑click Update requires Marketplace / Open VSX installation.
+- Check Updates: Command Palette → `Antigravity 同步：检查更新`
 
 ---
 
@@ -68,6 +73,13 @@
 - 默认排除敏感文件（OAuth/凭证/系统文件等）
 - 同步数据写入 `.antigravity-sync`，避免影响仓库其他内容
 - 同步密码只存本机 Secret Storage，仓库仅存哈希
+
+---
+
+## 忘记同步密码怎么办？
+
+- 同步密码不可找回（仓库只保存哈希）
+- 使用命令 **Antigravity 同步：重置同步密码** 重新设置
 
 ---
 

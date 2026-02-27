@@ -409,6 +409,14 @@ export class GitService {
   }
 
   /**
+   * Stage specific paths
+   */
+  async stagePaths(paths: string[]): Promise<void> {
+    if (!paths.length) return;
+    await this.git.add(paths);
+  }
+
+  /**
    * Commit changes
    */
   async commit(message: string): Promise<string | null> {
@@ -419,6 +427,19 @@ export class GitService {
     }
 
     const result = await this.git.commit(message);
+    return result.commit;
+  }
+
+  /**
+   * Commit specific paths only
+   */
+  async commitPaths(message: string, paths: string[]): Promise<string | null> {
+    if (!paths.length) return null;
+    const status = await this.git.status();
+    if (status.isClean()) {
+      return null;
+    }
+    const result = await this.git.commit(message, paths);
     return result.commit;
   }
 

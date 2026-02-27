@@ -128,6 +128,9 @@ export class MainPanel {
             <div class="section-header">
               <span class="codicon codicon-repo"></span>
               <span class="section-title">仓库</span>
+              <vscode-button appearance="icon" id="btn-check-updates" title="检查更新">
+                <span class="codicon codicon-versions"></span>
+              </vscode-button>
               <vscode-button appearance="icon" id="btn-disconnect" title="断开连接">
                 <span class="codicon codicon-close"></span>
               </vscode-button>
@@ -267,6 +270,11 @@ export class MainPanel {
     // Disconnect button
     document.getElementById('btn-disconnect')?.addEventListener('click', () => {
       vscode.postMessage({ type: 'disconnect' });
+    });
+
+    // Check updates button
+    document.getElementById('btn-check-updates')?.addEventListener('click', () => {
+      vscode.postMessage({ type: 'checkUpdates' });
     });
 
     // Dismiss error

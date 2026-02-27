@@ -528,6 +528,45 @@ export class SyncService {
   }
 
   /**
+   * Reset sync password (write new hash to repo and push)
+   */
+  async resetSyncPassword(newPassword: string, token: string): Promise<void> {
+    const config = this.configService.getConfig();
+    if (!config.repositoryUrl) {
+      throw new Error('仓库地址未配置');
+    }
+    if (!newPassword || newPassword.length < 6) {
+      throw new Error('同步密码长度至少 6 位');
+    }
+    if (!token) {
+      throw new Error('访问令牌未提供');
+    }
+
+    const syncRepoPath = this.configService.getSyncRepoPath();
+    if (!this.gitService) {
+      this.gitService = new GitService(syncRepoPath);
+    }
+    await this.gitService.initializeRepository(config.repositoryUrl, token);
+
+    const syncDataRoot = this.getSyncDataRoot(config);
+    const metaDir = path.join(syncDataRoot, '.sync');
+    if (!fs.existsSync(metaDir)) {
+      fs.mkdirSync(metaDir, { recursive: true });
+    }
+
+    const hash = crypto.createHash('sha256').update(newPassword).digest('hex');
+    const passwordFile = path.join(metaDir, 'password.sha256');
+    fs.writeFileSync(passwordFile, `${hash}\n`, { mode: 0o600 });
+
+    const relativePath = path.relative(syncRepoPath, passwordFile).replace(/\\/g, '/');
+    await this.gitService.stagePaths([relativePath]);
+    const commitId = await this.gitService.commitPaths('重置同步密码', [relativePath]);
+    if (commitId) {
+      await this.gitService.push();
+    }
+  }
+
+  /**
    * Set callback for countdown updates
    */
   setCountdownCallback(callback: (seconds: number) => void): void {

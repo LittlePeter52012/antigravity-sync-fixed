@@ -84,6 +84,9 @@ export class SidePanelProvider implements vscode.WebviewViewProvider {
           // Just refresh status (git fetch + check) - no file copy needed
           await this.sendGitStatus();
           break;
+        case 'checkUpdates':
+          await vscode.commands.executeCommand('antigravitySync.checkUpdates');
+          break;
         case 'startAutoRetry':
           await this.handleStartAutoRetry();
           break;

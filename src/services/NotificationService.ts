@@ -127,6 +127,7 @@ export class NotificationService {
       void this.error('同步密码验证失败', {
         detail: '请输入正确的同步密码（需与仓库中的密码一致）。',
         actions: [
+          { title: '重置同步密码', action: () => void vscode.commands.executeCommand('antigravitySync.resetSyncPassword') },
           { title: '重新配置', action: () => void vscode.commands.executeCommand('antigravitySync.configure') }
         ]
       });
@@ -134,6 +135,7 @@ export class NotificationService {
       void this.error('同步密码验证失败', {
         detail: '请输入正确的同步密码（需与仓库中的密码一致）。',
         actions: [
+          { title: '重置同步密码', action: () => void vscode.commands.executeCommand('antigravitySync.resetSyncPassword') },
           { title: '重新配置', action: () => void vscode.commands.executeCommand('antigravitySync.configure') }
         ]
       });
