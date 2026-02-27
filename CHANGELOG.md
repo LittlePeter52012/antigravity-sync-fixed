@@ -20,6 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - 切换仓库后 `origin` 仍指向旧仓库的问题
 
+## [0.4.3] - 2026-02-27
+
+### Changed
+- README 精简为中英双语简明版
+- 移除不必要的文档 MD 文件
+- 同步拷贝跳过未变化文件，减少 IO
+
 ## [0.4.2] - 2026-02-27
 
 ### Added

@@ -381,10 +381,22 @@ export class SyncService {
         fs.mkdirSync(destDir, { recursive: true });
       }
 
-      // Copy file
+      // Copy file (skip if unchanged)
       if (fs.existsSync(sourcePath)) {
-        fs.copyFileSync(sourcePath, destPath);
-        copiedCount++;
+        const sourceStat = fs.statSync(sourcePath);
+        let shouldCopy = true;
+        if (fs.existsSync(destPath)) {
+          const destStat = fs.statSync(destPath);
+          if (destStat.size === sourceStat.size && destStat.mtimeMs === sourceStat.mtimeMs) {
+            shouldCopy = false;
+          }
+        }
+
+        if (shouldCopy) {
+          fs.copyFileSync(sourcePath, destPath);
+          fs.utimesSync(destPath, sourceStat.atime, sourceStat.mtime);
+          copiedCount++;
+        }
       }
     }
 
@@ -434,8 +446,19 @@ export class SyncService {
         if (!fs.existsSync(destDir)) {
           fs.mkdirSync(destDir, { recursive: true });
         }
-        fs.copyFileSync(sourcePath, destPath);
-        count++;
+        const sourceStat = fs.statSync(sourcePath);
+        let shouldCopy = true;
+        if (fs.existsSync(destPath)) {
+          const destStat = fs.statSync(destPath);
+          if (destStat.size === sourceStat.size && destStat.mtimeMs === sourceStat.mtimeMs) {
+            shouldCopy = false;
+          }
+        }
+        if (shouldCopy) {
+          fs.copyFileSync(sourcePath, destPath);
+          fs.utimesSync(destPath, sourceStat.atime, sourceStat.mtime);
+          count++;
+        }
       }
     }
 
