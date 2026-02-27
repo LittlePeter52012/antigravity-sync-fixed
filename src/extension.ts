@@ -9,6 +9,8 @@ import { StatusBarService } from './services/StatusBarService';
 import { WatcherService } from './services/WatcherService';
 import { NotificationService } from './services/NotificationService';
 import { SidePanelProvider } from './ui/SidePanelProvider';
+import { GitService } from './services/GitService';
+import { checkIsPublicRepo, isUpstreamRepo, validateGitRepoUrl } from './services/RepoValidationService';
 
 let syncService: SyncService | undefined;
 let watcherService: WatcherService | undefined;
@@ -16,7 +18,7 @@ let statusBarService: StatusBarService | undefined;
 let sidePanelProvider: SidePanelProvider | undefined;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  console.log('Antigravity Sync is activating...');
+  console.log('Antigravity 同步与自动重试正在激活...');
 
   // Initialize services
   const configService = new ConfigService(context);
@@ -25,7 +27,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   watcherService = new WatcherService(configService, syncService);
 
   // Register side panel
-  sidePanelProvider = new SidePanelProvider(context.extensionUri, syncService, configService);
+  sidePanelProvider = new SidePanelProvider(
+    context.extensionUri,
+    syncService,
+    configService,
+    watcherService
+  );
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
       SidePanelProvider.viewType,
@@ -71,7 +78,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
 
     vscode.commands.registerCommand('antigravitySync.openPanel', () => {
-      vscode.commands.executeCommand('antigravity-sync.focus');
+      vscode.commands.executeCommand('antigravity-sync-fixed.focus');
     }),
 
     statusBarService.getStatusBarItem()
@@ -97,21 +104,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     // Delay auto-start to let UI initialize
     setTimeout(async () => {
       try {
-        console.log('[Antigravity] Auto-starting Auto Retry...');
+        console.log('[Antigravity] 正在自动启动自动重试...');
         await sidePanelProvider?.tryAutoStartRetry();
       } catch (error) {
-        console.error('[Antigravity] Auto-start failed:', error);
+        console.error('[Antigravity] 自动启动失败：', error);
       }
     }, 3000);
   }
 
-  console.log('Antigravity Sync activated!');
+  console.log('Antigravity 同步与自动重试已激活！');
 }
 
 export function deactivate(): void {
   watcherService?.stop();
   statusBarService?.hide();
-  console.log('Antigravity Sync deactivated');
+  console.log('Antigravity 同步与自动重试已停用');
 }
 
 /**
@@ -119,11 +126,11 @@ export function deactivate(): void {
  */
 function showWelcomeMessage(): void {
   vscode.window.showInformationMessage(
-    'Welcome to Antigravity Sync! Set up your private repository to sync your Gemini context.',
-    'Configure Now',
-    'Later'
+    '欢迎使用 Antigravity 同步！请先配置私有仓库以同步 Gemini 上下文。',
+    '立即配置',
+    '稍后'
   ).then(selection => {
-    if (selection === 'Configure Now') {
+    if (selection === '立即配置') {
       vscode.commands.executeCommand('antigravitySync.configure');
     }
   });
@@ -139,25 +146,25 @@ async function configureRepository(
 ): Promise<void> {
   // Step 1: Welcome and explanation
   const proceed = await vscode.window.showInformationMessage(
-    'Antigravity Sync Setup\n\nThis will sync your ~/.gemini folder (Knowledge Items, settings) to a private Git repository.',
+    'Antigravity 同步设置\n\n将同步 ~/.gemini 中的内容到你的私有 Git 仓库。',
     { modal: true },
-    'Continue'
+    '继续'
   );
 
-  if (proceed !== 'Continue') {
+  if (proceed !== '继续') {
     return;
   }
 
   // Step 2: Get access token
   const token = await vscode.window.showInputBox({
-    title: 'Step 1/2: Git Access Token',
-    prompt: 'Enter your access token (PAT for GitHub/GitLab, App Password for Bitbucket)',
+    title: '步骤 1/3：访问令牌',
+    prompt: '请输入访问令牌（GitHub/GitLab 的 PAT 或 Bitbucket App Password）',
     password: true,
-    placeHolder: 'Your access token with repo access',
+    placeHolder: '具有仓库访问权限的令牌',
     ignoreFocusOut: true,
     validateInput: (value) => {
       if (!value || value.length < 8) {
-        return 'Please enter a valid access token';
+        return '请输入有效的访问令牌';
       }
       return undefined;
     }
@@ -169,13 +176,13 @@ async function configureRepository(
 
   // Step 3: Get repository URL
   const repoUrl = await vscode.window.showInputBox({
-    title: 'Step 2/2: Private Repository URL',
-    prompt: 'Enter your PRIVATE repository URL (GitHub, GitLab, Bitbucket, etc.)',
-    placeHolder: 'https://github.com/user/repo or https://gitlab.com/user/repo',
+    title: '步骤 2/3：私有仓库地址',
+    prompt: '请输入私有仓库地址（GitHub / GitLab / Bitbucket 等）',
+    placeHolder: 'https://github.com/user/repo 或 https://gitlab.com/user/repo',
     ignoreFocusOut: true,
     validateInput: (value) => {
       if (!value || !value.includes('://')) {
-        return 'Please enter a valid Git repository URL';
+        return '请输入有效的 Git 仓库地址';
       }
       return undefined;
     }
@@ -185,52 +192,86 @@ async function configureRepository(
     return;
   }
 
+  const validationResult = validateGitRepoUrl(repoUrl);
+  if (!validationResult.valid) {
+    await NotificationService.error('仓库地址无效', {
+      detail: validationResult.error,
+      modal: true
+    });
+    return;
+  }
+
+  const isPublic = await checkIsPublicRepo(repoUrl);
+  if (isPublic) {
+    await NotificationService.error('仓库必须为私有', {
+      detail: '检测到仓库为公开仓库，请改用私有仓库以保护敏感数据。',
+      modal: true
+    });
+    return;
+  }
+
+  if (isUpstreamRepo(repoUrl)) {
+    const choice = await vscode.window.showWarningMessage(
+      '你正在使用原作者仓库地址，这会把数据推送到他人仓库，存在安全风险。是否仍然继续？',
+      { modal: true },
+      '仍然继续'
+    );
+    if (choice !== '仍然继续') {
+      return;
+    }
+  }
+
   // Step 4: Confirmation dialog
   const confirmMessage = [
-    `Repository: ${repoUrl}`,
+    '步骤 3/3：确认配置',
     '',
-    'The extension will now:',
-    '• Validate your access token',
-    '• Initialize the sync repository',
-    '• Start auto-syncing your Gemini context',
+    `仓库地址：${repoUrl}`,
     '',
-    'Continue?'
+    '接下来将执行：',
+    '• 验证访问权限',
+    '• 初始化同步仓库',
+    '• 启动自动同步',
+    '',
+    '是否继续？'
   ].join('\n');
 
   const confirm = await vscode.window.showInformationMessage(
     confirmMessage,
     { modal: true },
-    'Confirm & Connect'
+    '确认并连接'
   );
 
-  if (confirm !== 'Confirm & Connect') {
+  if (confirm !== '确认并连接') {
     return;
   }
 
   // Step 5: Validate and save
   try {
     await NotificationService.withProgress(
-      'Connecting to repository...',
+      '正在连接仓库...',
       async (progress) => {
-        progress.report({ message: 'Validating access token...' });
+        progress.report({ message: '验证访问权限...' });
+
+        const tempGitService = new GitService(configService.getSyncRepoPath());
+        await tempGitService.verifyAccess(repoUrl, token);
 
         // URL must be set first (credentials storage depends on URL)
         await configService.setRepositoryUrl(repoUrl);
         await configService.saveCredentials(token);
 
-        progress.report({ message: 'Initializing sync repository...' });
+        progress.report({ message: '初始化同步仓库...' });
         await syncService.initialize();
 
-        progress.report({ message: 'Starting auto-sync...' });
+        progress.report({ message: '启动自动同步...' });
       }
     );
 
     vscode.window.showInformationMessage(
-      'Antigravity Sync configured successfully! 🎉\n\nYour context will now sync automatically.',
-      'Open Panel'
+      '配置成功！🎉\n\n你的上下文将自动同步。',
+      '打开面板'
     ).then(selection => {
-      if (selection === 'Open Panel') {
-        vscode.commands.executeCommand('antigravity-sync.focus');
+      if (selection === '打开面板') {
+        vscode.commands.executeCommand('antigravity-sync-fixed.focus');
       }
     });
 
@@ -251,14 +292,14 @@ async function showStatus(syncService: SyncService): Promise<void> {
   const status = await syncService.getStatus();
 
   const items: vscode.QuickPickItem[] = [
-    { label: '$(sync) Sync Status', description: status.syncStatus },
-    { label: '$(git-commit) Last Sync', description: status.lastSync || 'Never' },
-    { label: '$(file) Pending Changes', description: String(status.pendingChanges) },
-    { label: '$(repo) Repository', description: status.repository || 'Not configured' }
+    { label: '$(sync) 同步状态', description: status.syncStatus },
+    { label: '$(git-commit) 最近同步', description: status.lastSync || '从未' },
+    { label: '$(file) 待同步变更', description: String(status.pendingChanges) },
+    { label: '$(repo) 仓库', description: status.repository || '未配置' }
   ];
 
   await vscode.window.showQuickPick(items, {
-    title: 'Antigravity Sync Status',
-    placeHolder: 'Current sync status'
+    title: 'Antigravity 同步状态',
+    placeHolder: '当前同步状态'
   });
 }

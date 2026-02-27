@@ -6,6 +6,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { getCleanRemoteUrl, normalizeRepoIdentity } from './RepoValidationService';
 
 const execAsync = promisify(exec);
 
@@ -62,7 +63,7 @@ export class GitService {
   async storeCredentials(url: string, token: string): Promise<void> {
     const parsed = this.parseGitUrl(url);
     if (!parsed) {
-      throw new Error('Invalid Git URL');
+      throw new Error('无效的 Git 仓库地址');
     }
 
     // Format for git credential store:
@@ -306,9 +307,9 @@ export class GitService {
 
             // Create initial commit immediately to establish HEAD
             const readmePath = path.join(this.repoPath, 'README.md');
-            fs.writeFileSync(readmePath, '# Antigravity Sync\n\nGemini context sync repository.\n');
+            fs.writeFileSync(readmePath, '# Antigravity 同步与自动重试\n\n用于同步 Gemini/Antigravity 上下文数据。\n');
             await this.git.add('README.md');
-            await this.git.commit('Initial commit');
+            await this.git.commit('初始提交');
           } else {
             throw error;
           }
@@ -317,8 +318,11 @@ export class GitService {
     }
 
     // Configure git
-    await this.git.addConfig('user.name', 'Antigravity Sync', false, 'local');
+    await this.git.addConfig('user.name', 'Antigravity Sync Fixed', false, 'local');
     await this.git.addConfig('user.email', 'sync@antigravity.local', false, 'local');
+
+    // Ensure origin matches the configured repo (no token stored in remote URL)
+    await this.ensureOriginMatches(remoteUrl);
   }
 
   /**
@@ -345,12 +349,54 @@ export class GitService {
     } catch (error) {
       const gitError = error as { message?: string };
       if (gitError.message?.includes('401') || gitError.message?.includes('403')) {
-        throw new Error('Invalid access token or no permission to access this repository');
+        throw new Error('401 访问令牌无效或无权限访问该仓库');
       }
       if (gitError.message?.includes('could not read')) {
-        throw new Error('Repository not found or access denied with this token');
+        throw new Error('404 仓库不存在或无权限访问');
       }
-      throw new Error(`Cannot access repository: ${gitError.message || 'Unknown error'}`);
+      throw new Error(`无法访问仓库：${gitError.message || '未知错误'}`);
+    }
+  }
+
+  /**
+   * Ensure origin remote matches configured repository URL (and strip credentials)
+   */
+  private async ensureOriginMatches(remoteUrl: string): Promise<void> {
+    const desiredKey = this.getRepoKey(remoteUrl);
+    if (!desiredKey) return;
+
+    const originUrl = await this.getOriginUrl();
+    const cleanUrl = getCleanRemoteUrl(remoteUrl);
+
+    if (!originUrl) {
+      await this.git.addRemote('origin', cleanUrl);
+      return;
+    }
+
+    const originKey = this.getRepoKey(originUrl);
+    if (!originKey) {
+      await this.git.remote(['set-url', 'origin', cleanUrl]);
+      return;
+    }
+
+    if (originKey !== desiredKey || originUrl !== cleanUrl) {
+      await this.git.remote(['set-url', 'origin', cleanUrl]);
+    }
+  }
+
+  private getRepoKey(url: string): string | null {
+    const identity = normalizeRepoIdentity(url);
+    if (!identity) return null;
+    return `${identity.host}/${identity.path}`;
+  }
+
+  private async getOriginUrl(): Promise<string | null> {
+    try {
+      const remotes = await this.git.getRemotes(true);
+      const origin = remotes.find(remote => remote.name === 'origin');
+      return origin?.refs?.fetch || origin?.refs?.push || null;
+    } catch {
+      return null;
     }
   }
 
@@ -432,11 +478,11 @@ export class GitService {
     if (sizeDiffRatio > SIZE_DIFF_THRESHOLD) {
       // Large size difference → keep larger file (more content = more important)
       keepLocal = localSize >= remoteSize;
-      this.log(`[Conflict] ${relativePath}: size diff ${(sizeDiffRatio * 100).toFixed(0)}% (local: ${localSize}, remote: ${remoteSize}) → keep ${keepLocal ? 'local' : 'remote'} (larger)`);
+      this.log(`[冲突] ${relativePath}: 大小差 ${(sizeDiffRatio * 100).toFixed(0)}%（本地: ${localSize}, 远端: ${remoteSize}）→ 保留${keepLocal ? '本地' : '远端'}（更大）`);
     } else {
       // Similar size → keep newer file
       keepLocal = localMtime >= remoteMtime;
-      this.log(`[Conflict] ${relativePath}: similar size → keep ${keepLocal ? 'local' : 'remote'} (newer: ${keepLocal ? localMtime.toISOString() : remoteMtime.toISOString()})`);
+      this.log(`[冲突] ${relativePath}: 大小接近 → 保留${keepLocal ? '本地' : '远端'}（更新: ${keepLocal ? localMtime.toISOString() : remoteMtime.toISOString()}）`);
     }
 
     // Resolve conflict by checking out the chosen version
@@ -455,51 +501,51 @@ export class GitService {
    * @param hasStash - whether there's a stash to pop
    */
   private async handleSmartMerge(hasStash: boolean): Promise<void> {
-    this.log('[SmartSync] === SMART MERGE STARTED ===');
+    this.log('[智能合并] === 开始智能合并 ===');
 
     // Step 1: Cleanup stale git state
-    this.log('[SmartSync] Step 1: Cleaning up stale git state...');
-    const rebaseAbortResult = await this.git.rebase({ '--abort': null }).catch(e => `rebase abort: ${e.message}`);
-    this.log(`[SmartSync] Rebase abort result: ${rebaseAbortResult}`);
-    const mergeAbortResult = await this.git.raw(['merge', '--abort']).catch(e => `merge abort: ${e.message}`);
-    this.log(`[SmartSync] Merge abort result: ${mergeAbortResult}`);
+    this.log('[智能合并] 步骤 1：清理过期的 git 状态...');
+    const rebaseAbortResult = await this.git.rebase({ '--abort': null }).catch(e => `rebase 终止失败：${e.message}`);
+    this.log(`[智能合并] Rebase 终止结果：${rebaseAbortResult}`);
+    const mergeAbortResult = await this.git.raw(['merge', '--abort']).catch(e => `merge 终止失败：${e.message}`);
+    this.log(`[智能合并] Merge 终止结果：${mergeAbortResult}`);
     this.cleanupIndexLock();
-    this.log('[SmartSync] Index lock cleaned');
+    this.log('[智能合并] 已清理 index.lock');
 
     // Step 2: Pop stash if any
     if (hasStash) {
-      this.log('[SmartSync] Step 2: Popping stash...');
-      const stashPopResult = await this.git.stash(['pop']).catch(e => `stash pop failed: ${e.message}`);
-      this.log(`[SmartSync] Stash pop result: ${stashPopResult}`);
+      this.log('[智能合并] 步骤 2：恢复暂存改动（stash pop）...');
+      const stashPopResult = await this.git.stash(['pop']).catch(e => `stash pop 失败：${e.message}`);
+      this.log(`[智能合并] Stash pop 结果：${stashPopResult}`);
     }
 
     // Step 3: Soft reset to unstage but KEEP working directory files
-    this.log('[SmartSync] Step 3: Soft resetting to HEAD (keeping local files)...');
-    await this.git.reset(['HEAD']).catch(e => this.log(`[SmartSync] Reset failed: ${e.message}`));
+    this.log('[智能合并] 步骤 3：软重置到 HEAD（保留本地文件）...');
+    await this.git.reset(['HEAD']).catch(e => this.log(`[智能合并] Reset 失败：${e.message}`));
 
     // Step 4: Fetch latest remote
-    this.log('[SmartSync] Step 4: Fetching origin...');
+    this.log('[智能合并] 步骤 4：拉取远端信息（fetch）...');
     await this.git.fetch('origin');
-    this.log('[SmartSync] Fetch complete');
+    this.log('[智能合并] Fetch 完成');
 
     // Step 5: Get files that differ between local and remote
-    this.log('[SmartSync] Step 5: Getting differing files...');
+    this.log('[智能合并] 步骤 5：获取有差异的文件...');
     let differingFiles: string[] = [];
     try {
       const diffOutput = await this.git.raw(['diff', '--name-only', 'HEAD', 'origin/main']);
       differingFiles = diffOutput.split('\n').filter(f => f.trim().length > 0);
-      this.log(`[SmartSync] Diff output (${differingFiles.length} files): ${differingFiles.slice(0, 10).join(', ')}${differingFiles.length > 10 ? '...' : ''}`);
+      this.log(`[智能合并] Diff 输出（${differingFiles.length} 个文件）：${differingFiles.slice(0, 10).join(', ')}${differingFiles.length > 10 ? '...' : ''}`);
     } catch (diffError) {
-      this.log(`[SmartSync] Diff failed: ${(diffError as Error).message}`);
+      this.log(`[智能合并] Diff 失败：${(diffError as Error).message}`);
       differingFiles = [];
     }
 
     const binaryExtensions = ['.pb', '.pbtxt', '.png', '.jpg', '.webp', '.gif'];
     const binaryFiles = differingFiles.filter(f => binaryExtensions.some(ext => f.endsWith(ext)));
-    this.log(`[SmartSync] Found ${binaryFiles.length} binary files to resolve`);
+    this.log(`[智能合并] 发现 ${binaryFiles.length} 个二进制文件需要处理`);
 
     // Step 6: For binary files, apply Smart Resolution
-    this.log('[SmartSync] Step 6: Applying Smart Resolution to binary files...');
+    this.log('[智能合并] 步骤 6：对二进制文件应用智能策略...');
     for (const file of binaryFiles) {
       try {
         // Get local file info
@@ -527,87 +573,87 @@ export class GitService {
         let keepLocal: boolean;
         if (sizeDiffRatio > 0.2) {
           keepLocal = localSize >= remoteSize;
-          this.log(`[SmartSync] ${file}: size ${localSize} vs ${remoteSize} (${(sizeDiffRatio * 100).toFixed(0)}%) → keep ${keepLocal ? 'LOCAL' : 'REMOTE'} (larger)`);
+          this.log(`[智能合并] ${file}: 大小 ${localSize} vs ${remoteSize}（${(sizeDiffRatio * 100).toFixed(0)}%）→ 保留${keepLocal ? '本地' : '远端'}（更大）`);
         } else {
           keepLocal = localMtime >= remoteMtime;
-          this.log(`[SmartSync] ${file}: similar size → keep ${keepLocal ? 'LOCAL' : 'REMOTE'} (newer)`);
+          this.log(`[智能合并] ${file}: 大小接近 → 保留${keepLocal ? '本地' : '远端'}（更新）`);
         }
 
         // If remote wins, checkout remote version
         if (!keepLocal) {
-          this.log(`[SmartSync] Checking out remote version of ${file}...`);
+          this.log(`[智能合并] 正在检出远端版本：${file}...`);
           await this.git.raw(['checkout', 'origin/main', '--', file]).catch(e =>
-            this.log(`[SmartSync] Checkout failed: ${e.message}`)
+            this.log(`[智能合并] 检出失败：${e.message}`)
           );
         }
         // If local wins, keep current file (do nothing)
       } catch (err) {
-        this.log(`[SmartSync] Error processing ${file}: ${(err as Error).message}`);
+        this.log(`[智能合并] 处理 ${file} 出错：${(err as Error).message}`);
       }
     }
 
     // Step 7: Stage all changes
-    this.log('[SmartSync] Step 7: Staging all changes...');
+    this.log('[智能合并] 步骤 7：暂存所有变更...');
     await this.git.add('-A');
     const statusAfterAdd = await this.git.status();
-    this.log(`[SmartSync] Status after add: ${statusAfterAdd.files.length} staged, conflicted: ${statusAfterAdd.conflicted?.length || 0}`);
+    this.log(`[智能合并] 暂存后状态：已暂存 ${statusAfterAdd.files.length}，冲突 ${statusAfterAdd.conflicted?.length || 0}`);
 
     // Step 8: Commit merged result
-    this.log('[SmartSync] Step 8: Committing...');
-    const commitResult = await this.git.commit('Sync: smart merge (larger/newer wins)').catch(e => `commit failed: ${e.message}`);
-    this.log(`[SmartSync] Commit result: ${JSON.stringify(commitResult)}`);
+    this.log('[智能合并] 步骤 8：提交合并结果...');
+    const commitResult = await this.git.commit('同步：智能合并（更大/更新优先）').catch(e => `提交失败：${e.message}`);
+    this.log(`[智能合并] 提交结果：${JSON.stringify(commitResult)}`);
 
     // Step 9: Push (no force - safer, will fail if diverged)
-    this.log('[SmartSync] Step 9: Pushing...');
+    this.log('[智能合并] 步骤 9：推送...');
     const pushResult = await this.git.push('origin', 'main').catch(async (e) => {
-      this.log(`[SmartSync] Push failed, trying pull then push: ${e.message}`);
+      this.log(`[智能合并] 推送失败，尝试先拉取再推送：${e.message}`);
       // If push fails, pull and retry
       await this.git.pull('origin', 'main', { '--rebase': 'false' }).catch(() => { });
-      return await this.git.push('origin', 'main').catch(e2 => `push retry failed: ${e2.message}`);
+      return await this.git.push('origin', 'main').catch(e2 => `推送重试失败：${e2.message}`);
     });
-    this.log(`[SmartSync] Push result: ${JSON.stringify(pushResult)}`);
+    this.log(`[智能合并] 推送结果：${JSON.stringify(pushResult)}`);
 
-    this.log('[SmartSync] === SMART MERGE COMPLETE ===');
+    this.log('[智能合并] === 智能合并完成 ===');
   }
 
   /**
    * Pull from remote (handles divergent branches with rebase)
    */
   async pull(): Promise<void> {
-    this.log('[GitService.pull] Starting pull...');
+    this.log('[Git 拉取] 开始拉取...');
     try {
       // Check initial status
       const status = await this.git.status();
       const hasChanges = status.files.length > 0;
       const hasPreExistingConflicts = (status.conflicted?.length || 0) > 0;
-      this.log(`[GitService.pull] Status: ${status.files.length} files, hasChanges=${hasChanges}`);
-      this.log(`[GitService.pull] Conflicted files: ${status.conflicted?.length || 0}`);
-      this.log(`[GitService.pull] Pre-existing conflicts: ${hasPreExistingConflicts}`);
+      this.log(`[Git 拉取] 状态：${status.files.length} 个文件，hasChanges=${hasChanges}`);
+      this.log(`[Git 拉取] 冲突文件：${status.conflicted?.length || 0}`);
+      this.log(`[Git 拉取] 已存在冲突：${hasPreExistingConflicts}`);
 
       // If there are pre-existing conflicts (ghost conflict state), handle them first
       if (hasPreExistingConflicts) {
-        this.log('[GitService.pull] Pre-existing conflicts detected, jumping to Smart Merge...');
+        this.log('[Git 拉取] 检测到已有冲突，进入智能合并...');
         await this.handleSmartMerge(false); // false = no stash to pop
         return;
       }
 
       if (hasChanges) {
-        this.log('[GitService.pull] Stashing local changes...');
-        await this.git.stash(['push', '-m', 'antigravity-sync-temp']);
+        this.log('[Git 拉取] 正在暂存本地改动...');
+        await this.git.stash(['push', '-m', 'antigravity-sync-fixed-temp']);
       }
 
       try {
         // Try pull with rebase to handle divergent branches
-        this.log('[GitService.pull] Attempting pull --rebase...');
+        this.log('[Git 拉取] 正在执行 pull --rebase...');
         await this.git.pull('origin', 'main', { '--rebase': 'true' });
-        this.log('[GitService.pull] Pull successful!');
+        this.log('[Git 拉取] 拉取成功！');
       } catch (error: unknown) {
         const gitError = error as { message?: string };
-        this.log(`[GitService.pull] Pull failed: ${gitError.message}`);
+        this.log(`[Git 拉取] 拉取失败：${gitError.message}`);
 
         // Empty repo - no remote branches yet, skip pull
         if (gitError.message?.includes("couldn't find remote ref")) {
-          this.log('[GitService.pull] Empty repo, skipping pull');
+          this.log('[Git 拉取] 远端为空，跳过拉取');
           // Pop stash if we had changes
           if (hasChanges) {
             await this.git.stash(['pop']).catch(() => { });
@@ -626,7 +672,7 @@ export class GitService {
           gitError.message?.includes('could not write index') ||
           gitError.message?.includes('index.lock')) {
 
-          this.log(`[GitService.pull] Conflict detected, calling handleSmartMerge(hasChanges=${hasChanges})...`);
+          this.log(`[Git 拉取] 检测到冲突，进入智能合并（hasChanges=${hasChanges}）...`);
           await this.handleSmartMerge(hasChanges);
           return;
         }

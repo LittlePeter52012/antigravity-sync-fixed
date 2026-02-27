@@ -1,245 +1,107 @@
-# Antigravity Sync - Retry
+# Antigravity 同步与自动重试
 
-
-
-[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/mrd9999.antigravity-sync.svg)](https://marketplace.visualstudio.com/items?itemName=mrd9999.antigravity-sync)
-[![Open VSX](https://img.shields.io/open-vsx/v/mrd9999/antigravity-sync)](https://open-vsx.org/extension/mrd9999/antigravity-sync)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-**Auto-sync AI context + Auto-accept/retry for AI coding agents. Zero-babysitting automation.**
+**自动同步 AI 上下文 + 自动重试（Auto Retry）**，减少看护与手动操作。
 
 ---
 
-## 👤 About Me
+## 功能概览
 
-**Dung Le** — Software Engineer from Vietnam 🇻🇳
-
-- 💼 **Facebook:** [@mrd.900s](https://www.facebook.com/mrd.900s)
-- 🐙 **GitHub:** [mrd9999](https://github.com/mrd9999)
-- 🐧 **VNLF:** [Vietnam Linux Family](https://www.facebook.com/groups/vietnamlinuxcommunity)
-
----
-
-## Screenshots
-
-| Auto Retry | Sync Dashboard |
-|:-----------:|:--------------:|
-| ![Auto Retry](resources/screenshot.png) | ![Sync](docs/images/panel-preview.png) |
+- **自动同步**：将 Gemini/Antigravity 的上下文数据同步到私有 Git 仓库
+- **自动重试**：AI 代理出错时自动点击 Retry 按钮
+- **私有仓库强制**：公开仓库会被拒绝，保护敏感信息
+- **可选目录同步**：在面板中按需勾选需要同步的目录
+- **冲突处理**：内置智能合并策略（更大/更新优先）
 
 ---
 
-## 🤖 Auto Retry
+## 默认同步目录
 
-Automatically click **Retry** buttons when AI agents encounter errors. Zero-babysitting automation!
+默认会同步以下目录（可在面板中调整）：
 
-### How It Works
+- `knowledge/`
+- `brain/`
+- `conversations/`
+- `skills/`
+- `annotations/`
 
-Uses Chrome DevTools Protocol (CDP) to inject a script that monitors the IDE webview and auto-clicks approval buttons.
-
-### Quick Start
-
-1. Open **Antigravity Sync** panel in sidebar
-2. Click **"Start Auto Retry"**
-3. First time: Follow setup dialog to enable CDP
-4. **Restart IDE** (Quit + Reopen using the command shown)
-5. Click **"Start Auto Retry"** again → Active! ✅
-
-### Supported IDEs
-
-- ✅ VS Code
-- ✅ Cursor  
-- ✅ Antigravity
-- ✅ Other Electron-based IDEs
-
-### Platform Support
-
-| Platform | Status |
-|----------|--------|
-| macOS | ✅ Full support |
-| Windows | ✅ Full support |
-| Linux | ✅ Full support |
+> 说明：`annotations/` 存放对话的元数据注解（`.pbtxt`），包含标题/标签、对话状态、Artifacts 批注等。  
+> 若需要在多机之间完整延续对话状态，建议与 `conversations/`、`brain/` 一起同步。
 
 ---
 
-## 🔄 Auto Sync
+## 重要说明：跨设备同步
 
-Sync **Gemini Antigravity context** (`~/.gemini/antigravity/`) across machines via private Git repository.
+Antigravity 的对话记录与工作区路径相关，**跨设备同步时需要保持工作区路径一致**。
 
-**Problem solved:** When switching machines, all conversation history, Knowledge Items and brain artifacts are lost. This extension auto-syncs via Git to preserve everything.
+示例：
+- 设备 A：`/Users/xxx/Documents/myproject`
+- 设备 B：也必须是 `/Users/xxx/Documents/myproject`
 
----
+如果路径不同，可使用软链接/快捷方式来对齐路径。
 
-## ⚠️ IMPORTANT: Cross-Machine Sync
-
-### Workspace Path Matching
-
-Antigravity stores conversation history by **absolute workspace path**. To see conversations from the old machine on a new machine, **workspace paths MUST BE IDENTICAL**.
-
-**Example:**
-- Machine A: `/Users/dung.leviet/Documents/myproject`
-- Machine B: **MUST also be** `/Users/dung.leviet/Documents/myproject`
-
-If paths differ, conversations won't appear even after successful sync.
-
-### Solution: Symlinks
-
-Create symlinks on the new machine to match the old machine's paths:
-
-```bash
-# Linux/macOS
-sudo mkdir -p /Users/dung.leviet/Documents
-sudo ln -s /actual/path/to/project /Users/dung.leviet/Documents/myproject
-
-# Windows (Run as Administrator)
-mklink /D "C:\Users\dung.leviet\Documents\myproject" "D:\actual\path\to\project"
-```
-
-### Reload Window After Sync
-
-After pulling data from remote, you **MUST reload VS Code window** to load new conversations:
+同步完成后请执行：
 
 ```
-Cmd+Shift+P (macOS) / Ctrl+Shift+P (Windows/Linux)
-→ "Developer: Reload Window"
+Cmd+Shift+P / Ctrl+Shift+P
+→ Developer: Reload Window
 ```
-
-### OS Compatibility
-
-| Sync between | Works? | Notes |
-|--------------|--------|-------|
-| macOS ↔ macOS | ✅ | Use symlink |
-| Linux ↔ Linux | ✅ | Use symlink |
-| Windows ↔ Windows | ✅ | Use `mklink /D` (Admin) |
-| macOS ↔ Linux | ✅ | Use symlink |
-| macOS/Linux ↔ Windows WSL | ✅ | Symlink in WSL + VS Code Remote |
-| **macOS/Linux ↔ Windows native** | ❌ | **Path format incompatible** |
-
-> **Note:** 
-> - `knowledge/` and `brain/` work on all platforms without symlink
-> - Only `conversations/` needs workspace path matching
 
 ---
 
-## Features
+## 安装方式
 
-- **Auto-sync** — Auto sync changes to private repository
-- **Private repo only** — Validate repository must be private
-- **Sensitive data protection** — Auto-exclude OAuth tokens and credentials
-- **Side panel** — Dashboard showing sync status, files and history
-- **Selective sync** — Choose folders to sync
-- **Setup wizard** — Step-by-step config
+### 方式 1：从 VSIX 安装
 
-## Installation
-
-### From Marketplace
-
-**VS Code Marketplace:**
-https://marketplace.visualstudio.com/items?itemName=mrd9999.antigravity-sync
-
-**Open VSX (for Cursor, VSCodium):**
-https://open-vsx.org/extension/mrd9999/antigravity-sync
-
-### From VS Code/Antigravity
-
-1. Open Extensions (`Cmd+Shift+X` / `Ctrl+Shift+X`)
-2. Search "Antigravity Sync"
-3. Install
-
-### From VSIX
-
-```bash
-# If agy is already in PATH:
-agy --install-extension antigravity-sync-0.1.1.vsix
-
-# If agy is NOT in PATH, add it first:
-# Cmd+Shift+P → "Shell Command: Install 'agy' command in PATH"
-# Then run the install command above
-```
-
-## Quick Start
-
-1. Create **private Git repository** (GitHub, GitLab, Bitbucket)
-2. Generate **access token** with repo scope
-   - GitHub: [github.com/settings/tokens](https://github.com/settings/tokens)
-   - GitLab: Settings → Access Tokens
-   - Bitbucket: App passwords
-3. Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`)
-4. Run `Antigravity Sync: Configure Repository`
-5. Follow setup wizard
-
-## Configuration
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `antigravitySync.repositoryUrl` | `""` | Git repository URL (must be private) |
-| `antigravitySync.autoSync` | `true` | Auto sync changes |
-| `antigravitySync.syncIntervalMinutes` | `5` | Auto-sync interval (minutes) |
-| `antigravitySync.syncFolders` | `["knowledge", "antigravity"]` | Folders to sync |
-| `antigravitySync.excludePatterns` | `[]` | Additional exclude patterns |
-| `antigravitySync.geminiPath` | `""` | Custom path to .gemini |
-
-## Excluded Files (Default)
-
-These files are **never synced** to protect privacy:
-
-| Pattern | Reason |
-|---------|--------|
-| `google_accounts.json` | OAuth credentials |
-| `oauth_creds.json` | OAuth credentials |
-| `browser_recordings/` | Large video files |
-| `code_tracker/` | Machine-specific data |
-| `implicit/` | Workspace indexing |
-| `user_settings.pb` | User preferences |
-
-> **Note**: `conversations/*.pb` ARE synced (chat history).
-
-Custom patterns can be added in `.antigravityignore` at `.gemini/antigravity`.
-
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `Antigravity Sync: Configure Repository` | Setup or change repository |
-| `Antigravity Sync: Sync Now` | Manual sync (push + pull) |
-| `Antigravity Sync: Push Changes` | Push local changes only |
-| `Antigravity Sync: Pull Changes` | Pull remote changes only |
-| `Antigravity Sync: Show Status` | Show sync status |
-
-## Security
-
-> ⚠️ Extension requires Git access token with repo scope.
-
-- Token stored in VS Code Secret Storage
-- Only works with **private repositories**
-- Sensitive files auto-excluded
-- HTTPS only
-
-## Development
-
-```bash
-git clone https://github.com/mrd9999/antigravity-sync.git
-cd antigravity-sync
-yarn install
-yarn build
-yarn test
-
-# Run extension (dev mode)
-agy . && press F5
-```
-
-## Contributing
-
-- [Report bugs](https://github.com/mrd9999/antigravity-sync/issues/new?template=bug_report.md)
-- [Request features](https://github.com/mrd9999/antigravity-sync/issues/new?template=feature_request.md)
-- [Improve docs](https://github.com/mrd9999/antigravity-sync/pulls)
-
-## License
-
-MIT © [Dung Le](https://www.facebook.com/mrd.900s)
+1. 在 IDE 中打开扩展管理（Extensions）
+2. 右上角 `...` → **Install from VSIX...**
+3. 选择打包好的 `.vsix` 文件
 
 ---
 
-## Contact
+## 快速开始
 
-- Facebook: [@mrd.900s](https://www.facebook.com/mrd.900s)
-- GitHub: [Issues](https://github.com/mrd9999/antigravity-sync/issues)
+1. 创建 **私有 Git 仓库**
+2. 生成 **访问令牌（PAT / App Password）**，确保具备仓库读写权限
+3. 打开命令面板，执行：
+   - `Antigravity 同步：配置仓库`
+4. 按步骤完成配置
+
+---
+
+## 配置项
+
+| 配置项 | 说明 |
+| --- | --- |
+| `antigravitySync.repositoryUrl` | 私有仓库地址（必须是私有） |
+| `antigravitySync.enabled` | 启用/禁用自动同步 |
+| `antigravitySync.autoSync` | 文件变更自动同步 |
+| `antigravitySync.syncIntervalMinutes` | 自动同步间隔（分钟） |
+| `antigravitySync.syncFolders` | 默认同步目录列表 |
+| `antigravitySync.excludePatterns` | 额外排除规则 |
+| `antigravitySync.geminiPath` | 自定义 .gemini 路径 |
+
+---
+
+## 隐私与安全
+
+- 仅允许 **私有仓库**
+- 凭据存储在系统凭据管理器
+- 默认排除敏感文件（OAuth/凭证/系统文件等）
+- 可使用 `.antigravityignore` 追加排除规则
+
+---
+
+## 版权与致谢
+
+本项目基于开源项目 **mrd9999/antigravity-sync** 进行二次开发与改造，遵循原项目的 **MIT License**。
+
+- 原项目仓库：`https://github.com/mrd9999/antigravity-sync`
+- 本项目仓库：`https://github.com/LittlePeter52012/antigravity-sync-fixed`
+
+感谢原作者的开源贡献。
+
+---
+
+## 许可证
+
+MIT License

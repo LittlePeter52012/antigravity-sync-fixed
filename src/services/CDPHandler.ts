@@ -59,7 +59,7 @@ export class CDPHandler {
       WebSocket = require('ws');
       return true;
     } catch (e) {
-      this.log('WebSocket module not found. Please install: npm install ws', 'error');
+      this.log('未找到 WebSocket 模块，请安装：npm install ws', 'error');
       return false;
     }
   }
@@ -91,7 +91,7 @@ export class CDPHandler {
       try {
         const pages = await this.getPages(port);
         if (pages.length > 0) {
-          this.log(`CDP available on port ${port}`, 'success');
+          this.log(`检测到 CDP 端口 ${port}`, 'success');
           return true;
         }
       } catch (e) {
@@ -127,7 +127,7 @@ export class CDPHandler {
     }
 
     this.isEnabled = true;
-    this.log(`Scanning ports ${this.basePort - this.portRange} to ${this.basePort + this.portRange}...`, 'info');
+    this.log(`正在扫描端口 ${this.basePort - this.portRange} 到 ${this.basePort + this.portRange}...`, 'info');
 
     // Clean up dead connections first
     for (const [id, conn] of this.connections) {
@@ -159,10 +159,10 @@ export class CDPHandler {
     const totalConnections = this.connections.size;
 
     if (totalConnections > 0) {
-      this.log(`Connected to ${totalConnections} page(s)`, 'success');
+      this.log(`已连接 ${totalConnections} 个页面`, 'success');
       return true;
     } else {
-      this.log('No CDP connections established. Is IDE launched with --remote-debugging-port=31905?', 'warning');
+      this.log('未建立 CDP 连接，请确认 IDE 使用 --remote-debugging-port=31905 启动。', 'warning');
       return false;
     }
   }
@@ -183,7 +183,7 @@ export class CDPHandler {
     }
 
     this.connections.clear();
-    this.log('CDP handler stopped', 'info');
+    this.log('CDP 已停止', 'info');
   }
 
   /**
@@ -228,18 +228,18 @@ export class CDPHandler {
 
         ws.on('open', () => {
           this.connections.set(id, { ws, injected: false });
-          this.log(`Connected to page ${id}`, 'success');
+          this.log(`已连接页面 ${id}`, 'success');
           resolve(true);
         });
 
         ws.on('error', (err: any) => {
-          this.log(`WebSocket error for ${id}: ${err.message}`, 'error');
+          this.log(`WebSocket 错误 ${id}: ${err.message}`, 'error');
           resolve(false);
         });
 
         ws.on('close', () => {
           this.connections.delete(id);
-          this.log(`Disconnected from page ${id}`, 'info');
+          this.log(`已断开页面 ${id}`, 'info');
         });
       } catch (e) {
         resolve(false);
@@ -260,14 +260,14 @@ export class CDPHandler {
         const script = this.getInjectScript();
         await this.evaluate(id, script);
         conn.injected = true;
-        this.log(`Script injected into ${id}`, 'success');
+        this.log(`已注入脚本到 ${id}`, 'success');
       }
 
       // Start the auto-accept with config
       const configJson = JSON.stringify(config || {});
       await this.evaluate(id, `if(window.__autoAcceptStart) window.__autoAcceptStart(${configJson})`);
     } catch (e: any) {
-      this.log(`Injection failed for ${id}: ${e.message}`, 'error');
+      this.log(`注入失败 ${id}: ${e.message}`, 'error');
     }
   }
 
@@ -280,7 +280,7 @@ export class CDPHandler {
 
     return new Promise((resolve, reject) => {
       const currentId = this.msgId++;
-      const timeout = setTimeout(() => reject(new Error('CDP Timeout')), 5000);
+      const timeout = setTimeout(() => reject(new Error('CDP 超时')), 5000);
 
       const onMessage = (data: any) => {
         try {
@@ -373,7 +373,7 @@ export class CDPHandler {
 (function() {
   // Prevent double-loading
   if (window.__autoRetryLoaded) {
-    console.log('[Auto Retry] Already loaded!');
+    console.log('[自动重试] 已加载，忽略重复注入！');
     return;
   }
   window.__autoRetryLoaded = true;
@@ -459,7 +459,7 @@ export class CDPHandler {
         }
       }
     } catch (e) {
-      console.error('[Auto Retry] Error:', e);
+      console.error('[自动重试] 错误：', e);
     }
 
     isProcessing = false;
@@ -483,7 +483,7 @@ export class CDPHandler {
       // Check for dangerous commands in nearby context
       const context = btn.closest('.terminal-command, .code-block, [class*="command"]');
       if (context && isDangerousCommand(context.textContent || '')) {
-        console.log('[Auto Retry] ⚠️ Blocked dangerous command!');
+        console.log('[自动重试] ⚠️ 已阻止危险命令！');
         stats.blocked++;
         continue;
       }
@@ -492,7 +492,7 @@ export class CDPHandler {
       btn.click();
       stats.clicks++;
 
-      console.log('[Auto Retry] ✅ Clicked Retry! (Total: ' + stats.clicks + ')');
+      console.log('[自动重试] ✅ 已点击 Retry（总计：' + stats.clicks + '）');
     }
   }
 
@@ -509,9 +509,9 @@ export class CDPHandler {
         subtree: true
       });
 
-      console.log('[Auto Retry] Observer started on document');
+      console.log('[自动重试] 已在当前页面启动监听');
     } catch (e) {
-      console.log('[Auto Retry] Could not setup observer:', e.message);
+      console.log('[自动重试] 无法启动监听：', e.message);
     }
   }
 
@@ -541,7 +541,7 @@ export class CDPHandler {
     if (pollTimer) clearInterval(pollTimer);
     pollTimer = setInterval(findAndClickButtons, config.pollInterval);
 
-    console.log('[Auto Retry] ✅ Started with interval: ' + config.pollInterval + 'ms');
+    console.log('[自动重试] ✅ 已启动，轮询间隔：' + config.pollInterval + 'ms');
   };
 
   // Stop the auto-accept
@@ -550,7 +550,7 @@ export class CDPHandler {
       clearInterval(pollTimer);
       pollTimer = null;
     }
-    console.log('[Auto Retry] Stopped');
+    console.log('[自动重试] 已停止');
   };
 
   // Get stats
@@ -563,7 +563,7 @@ export class CDPHandler {
     stats = { clicks: 0, blocked: 0, fileEdits: 0, terminalCommands: 0 };
   };
 
-  console.log('[Auto Retry] ✅ Loaded! Ready to auto-click Retry button on errors.');
+  console.log('[自动重试] ✅ 已加载！当出现错误时将自动点击 Retry 按钮。');
 })();
 `;
   }

@@ -56,11 +56,11 @@ export class Relauncher {
    */
   async ensureCDPAndPrompt(): Promise<{ success: boolean; relaunched: boolean }> {
     if (this.checkCurrentProcessHasFlag()) {
-      this.log('CDP flag already present.', 'success');
+      this.log('已检测到 CDP 参数。', 'success');
       return { success: true, relaunched: false };
     }
 
-    this.log('Setting up CDP...', 'info');
+    this.log('正在设置 CDP...', 'info');
     const status = await this.modifyShortcut();
 
     if (status === 'MODIFIED' || status === 'READY') {
@@ -94,30 +94,30 @@ export class Relauncher {
     const command = `~/.local/bin/${ideName.toLowerCase()}-cdp`;
 
     const choice = await vscode.window.showWarningMessage(
-      `✅ CDP Setup Complete!\n\n` +
-      `📌 NEXT STEPS:\n` +
-      `1. Press Cmd+Q to QUIT ${ideName}\n` +
-      `2. Open Terminal app (in /Applications/Utilities/)\n` +
-      `3. Paste the command and press Enter\n\n` +
-      `Or use the wrapper app in ~/Applications folder.`,
+      `✅ CDP 设置完成！\n\n` +
+      `📌 接下来请按步骤操作：\n` +
+      `1. 按 Cmd+Q 退出 ${ideName}\n` +
+      `2. 打开“终端”应用（/Applications/Utilities/）\n` +
+      `3. 粘贴命令并回车\n\n` +
+      `或者使用 ~/Applications 目录中的启动器。`,
       { modal: true },
-      '📋 Copy Command',
-      '📁 Open Folder'
+      '📋 复制命令',
+      '📁 打开文件夹'
     );
 
-    if (choice === '📋 Copy Command') {
+    if (choice === '📋 复制命令') {
       await vscode.env.clipboard.writeText(command);
       vscode.window.showInformationMessage(
-        `✅ Command copied!\n\n` +
-        `Now: Cmd+Q → Open Terminal → Paste (Cmd+V) → Enter`
+        `✅ 命令已复制！\n\n` +
+        `现在：Cmd+Q → 打开终端 → 粘贴（Cmd+V）→ 回车`
       );
-    } else if (choice === '📁 Open Folder') {
+    } else if (choice === '📁 打开文件夹') {
       const { exec } = require('child_process');
       const folderPath = path.join(os.homedir(), 'Applications');
       exec(`open "${folderPath}"`);
       vscode.window.showInformationMessage(
-        `✅ Folder opened!\n\n` +
-        `Now: Cmd+Q → Double-click "${ideName}CDP" in the folder`
+        `✅ 已打开文件夹！\n\n` +
+        `现在：Cmd+Q → 双击文件夹中的 "${ideName}CDP"`
       );
     }
   }
@@ -129,24 +129,24 @@ export class Relauncher {
     const command = this.getLaunchCommand();
 
     const choice = await vscode.window.showWarningMessage(
-      `✅ CDP Setup Complete!\n\n` +
-      `📌 NEXT STEPS (choose one):\n\n` +
-      `Option A - Use Updated Shortcut:\n` +
-      `1. Close ${ideName} (File → Exit)\n` +
-      `2. Reopen from Desktop or Start Menu\n\n` +
-      `Option B - Use Command:\n` +
-      `1. Click "Copy & Quit" below\n` +
-      `2. Press Win+R, type "cmd", press Enter\n` +
-      `3. Right-click to paste, press Enter`,
+      `✅ CDP 设置完成！\n\n` +
+      `📌 请选择一种方式：\n\n` +
+      `方式 A - 使用已更新的快捷方式：\n` +
+      `1. 关闭 ${ideName}（文件 → 退出）\n` +
+      `2. 从桌面或开始菜单重新打开\n\n` +
+      `方式 B - 使用命令行：\n` +
+      `1. 点击下方“复制并退出”\n` +
+      `2. 按 Win+R 输入 "cmd" 回车\n` +
+      `3. 右键粘贴并回车`,
       { modal: true },
-      '📋 Copy & Quit'
+      '📋 复制并退出'
     );
 
-    if (choice === '📋 Copy & Quit') {
+    if (choice === '📋 复制并退出') {
       await vscode.env.clipboard.writeText(command);
       vscode.window.showInformationMessage(
-        `✅ Command copied! ${ideName} will close now.\n\n` +
-        `Press Win+R → type "cmd" → Enter → Right-click paste → Enter`
+        `✅ 命令已复制！${ideName} 即将关闭。\n\n` +
+        `Win+R → 输入 "cmd" → 回车 → 右键粘贴 → 回车`
       );
       // Auto quit after short delay
       setTimeout(() => {
@@ -162,24 +162,24 @@ export class Relauncher {
     const command = this.getLaunchCommand();
 
     const choice = await vscode.window.showWarningMessage(
-      `✅ CDP Setup Complete!\n\n` +
-      `📌 NEXT STEPS (choose one):\n\n` +
-      `Option A - Use Updated Launcher:\n` +
-      `1. Close ${ideName}\n` +
-      `2. Reopen from Application Menu\n\n` +
-      `Option B - Use Terminal:\n` +
-      `1. Click "Copy & Quit" below\n` +
-      `2. Press Ctrl+Alt+T to open Terminal\n` +
-      `3. Paste (Ctrl+Shift+V) and press Enter`,
+      `✅ CDP 设置完成！\n\n` +
+      `📌 请选择一种方式：\n\n` +
+      `方式 A - 使用已更新的启动器：\n` +
+      `1. 关闭 ${ideName}\n` +
+      `2. 从应用菜单重新打开\n\n` +
+      `方式 B - 使用终端：\n` +
+      `1. 点击下方“复制并退出”\n` +
+      `2. 按 Ctrl+Alt+T 打开终端\n` +
+      `3. 粘贴（Ctrl+Shift+V）并回车`,
       { modal: true },
-      '📋 Copy & Quit'
+      '📋 复制并退出'
     );
 
-    if (choice === '📋 Copy & Quit') {
+    if (choice === '📋 复制并退出') {
       await vscode.env.clipboard.writeText(command);
       vscode.window.showInformationMessage(
-        `✅ Command copied! ${ideName} will close now.\n\n` +
-        `Press Ctrl+Alt+T → Paste (Ctrl+Shift+V) → Enter`
+        `✅ 命令已复制！${ideName} 即将关闭。\n\n` +
+        `Ctrl+Alt+T → 粘贴（Ctrl+Shift+V）→ 回车`
       );
       // Auto quit after short delay
       setTimeout(() => {
@@ -247,15 +247,15 @@ export class Relauncher {
     const command = this.getLaunchCommand();
 
     vscode.window.showInformationMessage(
-      `📖 To enable Auto Retry:\n\n` +
-      `1. Close ${ideName}\n` +
-      `2. Run: ${command}\n\n` +
-      `Or add --remote-debugging-port=${this.cdpPort} to your shortcut.`,
-      'Copy Command'
+      `📖 启用自动重试步骤：\n\n` +
+      `1. 关闭 ${ideName}\n` +
+      `2. 运行：${command}\n\n` +
+      `或者把 --remote-debugging-port=${this.cdpPort} 添加到启动参数。`,
+      '复制命令'
     ).then(choice => {
-      if (choice === 'Copy Command') {
+      if (choice === '复制命令') {
         vscode.env.clipboard.writeText(command);
-        vscode.window.showInformationMessage('✅ Command copied!');
+        vscode.window.showInformationMessage('✅ 命令已复制！');
       }
     });
   }
@@ -273,7 +273,7 @@ export class Relauncher {
         return this.modifyLinuxDesktop() ? 'MODIFIED' : 'FAILED';
       }
     } catch (e: any) {
-      this.log(`Error: ${e.message}`, 'error');
+      this.log(`错误：${e.message}`, 'error');
       return 'FAILED';
     }
   }
@@ -307,10 +307,10 @@ export class Relauncher {
       const content = `#!/bin/bash\nopen -a "${appPath}" --args --remote-debugging-port=${this.cdpPort} "$@"`;
       fs.writeFileSync(wrapperPath, content, { mode: 0o755 });
 
-      this.log(`Created wrapper: ${wrapperPath}`, 'success');
+      this.log(`已创建启动器：${wrapperPath}`, 'success');
       return true;
     } catch (e: any) {
-      this.log(`Failed: ${e.message}`, 'error');
+      this.log(`创建失败：${e.message}`, 'error');
       return false;
     }
   }
@@ -382,7 +382,7 @@ if ($modified) { "MODIFIED" } else { "READY" }
           if (!content.includes(`--remote-debugging-port=${port}`)) {
             content = content.replace(/^Exec=(.*)$/m, `Exec=$1 --remote-debugging-port=${port}`);
             fs.writeFileSync(path.join(desktopDir, file), content);
-            this.log(`Modified: ${file}`, 'success');
+            this.log(`已修改：${file}`, 'success');
             return true;
           }
         }
@@ -390,7 +390,7 @@ if ($modified) { "MODIFIED" } else { "READY" }
 
       return false;
     } catch (e: any) {
-      this.log(`Failed: ${e.message}`, 'error');
+      this.log(`修改失败：${e.message}`, 'error');
       return false;
     }
   }

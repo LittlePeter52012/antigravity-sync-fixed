@@ -13,8 +13,8 @@ This guide covers local development setup for Antigravity Sync.
 
 ```bash
 # Clone and install
-git clone https://github.com/AntisyncOrg/antigravity-sync.git
-cd antigravity-sync
+git clone https://github.com/LittlePeter52012/antigravity-sync-fixed.git
+cd antigravity-sync-fixed
 yarn install
 
 # Build
@@ -27,7 +27,7 @@ yarn test
 ## Project Structure
 
 ```
-antigravity-sync/
+antigravity-sync-fixed/
 ├── src/                    # Extension source
 │   ├── extension.ts        # Entry point
 │   ├── services/           # Business logic
@@ -83,7 +83,6 @@ antigravity-sync/
 
 - **SyncService** — Orchestrates sync operations
 - **GitService** — Local Git wrapper (simple-git)
-- **GitHubService** — GitHub API (Octokit)
 - **FilterService** — File filtering
 - **ConfigService** — Settings management
 

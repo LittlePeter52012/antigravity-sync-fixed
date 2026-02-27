@@ -103,39 +103,39 @@ export class NotificationService {
    */
   static handleSyncError(error: Error): void {
     if (error.message.includes('PRIVATE')) {
-      void this.error('Repository must be private', {
-        detail: 'Your Antigravity context may contain sensitive information. Please use a private repository.',
+      void this.error('仓库必须为私有', {
+        detail: '你的 Antigravity 上下文可能包含敏感信息，请使用私有仓库。',
         actions: [
-          { title: 'Configure', action: () => void vscode.commands.executeCommand('antigravitySync.configure') }
+          { title: '重新配置', action: () => void vscode.commands.executeCommand('antigravitySync.configure') }
         ]
       });
     } else if (error.message.includes('404')) {
-      void this.error('Repository not found', {
-        detail: 'Please check the repository URL and ensure your token has access.',
+      void this.error('仓库不存在', {
+        detail: '请检查仓库地址，并确保令牌拥有访问权限。',
         actions: [
-          { title: 'Configure', action: () => void vscode.commands.executeCommand('antigravitySync.configure') }
+          { title: '重新配置', action: () => void vscode.commands.executeCommand('antigravitySync.configure') }
         ]
       });
     } else if (error.message.includes('401')) {
-      void this.error('Invalid access token', {
-        detail: 'Your Personal Access Token is invalid or expired.',
+      void this.error('访问令牌无效', {
+        detail: '你的访问令牌无效或已过期。',
         actions: [
-          { title: 'Update Token', action: () => void vscode.commands.executeCommand('antigravitySync.configure') }
+          { title: '更新令牌', action: () => void vscode.commands.executeCommand('antigravitySync.configure') }
         ]
       });
     } else if (error.message.includes('network') || error.message.includes('ENOTFOUND')) {
-      void this.error('Network error', {
-        detail: 'Please check your internet connection.',
+      void this.error('网络错误', {
+        detail: '请检查你的网络连接。',
         actions: [
-          { title: 'Retry', action: () => void vscode.commands.executeCommand('antigravitySync.syncNow') }
+          { title: '重试', action: () => void vscode.commands.executeCommand('antigravitySync.syncNow') }
         ]
       });
     } else {
-      void this.error('Sync failed', {
+      void this.error('同步失败', {
         detail: error.message,
         actions: [
-          { title: 'Retry', action: () => void vscode.commands.executeCommand('antigravitySync.syncNow') },
-          { title: 'Show Logs', action: () => void vscode.commands.executeCommand('workbench.action.toggleDevTools') }
+          { title: '重试', action: () => void vscode.commands.executeCommand('antigravitySync.syncNow') },
+          { title: '查看日志', action: () => void vscode.commands.executeCommand('workbench.action.toggleDevTools') }
         ]
       });
     }
@@ -145,11 +145,11 @@ export class NotificationService {
    * Conflict notification
    */
   static handleConflict(files: string[]): void {
-    void this.warning('Merge conflict detected', {
-      detail: `${files.length} file(s) have conflicts. Auto-merge was applied.`,
+    void this.warning('检测到合并冲突', {
+      detail: `共有 ${files.length} 个文件存在冲突，已尝试自动合并。`,
       actions: [
         {
-          title: 'View Files', action: () => {
+          title: '查看文件', action: () => {
             // Open first conflicted file
             if (files.length > 0) {
               void vscode.window.showTextDocument(vscode.Uri.file(files[0]));

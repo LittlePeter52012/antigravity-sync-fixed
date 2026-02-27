@@ -57,7 +57,7 @@ export class AutoRetryService {
    * Log message to callback
    */
   private log(message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info'): void {
-    console.log(`[AutoRetry] ${message}`);
+    console.log(`[自动重试] ${message}`);
     this.logCallback?.(message, type);
   }
 
@@ -94,7 +94,7 @@ export class AutoRetryService {
    * Note: CDP availability should be checked by caller before calling start()
    */
   public async start(): Promise<boolean> {
-    this.log('Starting Auto Retry...', 'info');
+    this.log('正在启动自动重试...', 'info');
 
     // Start CDP handler
     this.config = this.getConfig();
@@ -104,13 +104,13 @@ export class AutoRetryService {
     });
 
     if (!connected) {
-      this.log('Failed to connect to CDP', 'error');
+      this.log('连接 CDP 失败', 'error');
       return false;
     }
 
     this.isRunning = true;
-    this.log(`✅ Auto Retry started!`, 'success');
-    this.log(`Connected to ${this.cdpHandler.getConnectionCount()} page(s)`, 'info');
+    this.log('✅ 自动重试已启动！', 'success');
+    this.log(`已连接 ${this.cdpHandler.getConnectionCount()} 个页面`, 'info');
 
     // Start polling to maintain connection
     this.pollTimer = setInterval(async () => {
@@ -137,7 +137,7 @@ export class AutoRetryService {
     }
 
     await this.cdpHandler.stop();
-    this.log('Auto Retry stopped', 'info');
+    this.log('自动重试已停止', 'info');
   }
 
   /**
@@ -213,7 +213,7 @@ export class AutoRetryService {
       win32: 'Windows',
       linux: 'Linux'
     };
-    return names[platform] || 'Unknown';
+    return names[platform] || '未知';
   }
 
   /**

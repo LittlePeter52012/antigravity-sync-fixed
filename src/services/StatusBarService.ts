@@ -23,39 +23,39 @@ interface StateConfig {
 const STATE_CONFIGS: Record<SyncState, StateConfig> = {
   [SyncState.Synced]: {
     icon: '$(check)',
-    text: 'Synced',
-    tooltip: 'Antigravity Sync: All changes synced'
+    text: '已同步',
+    tooltip: 'Antigravity 同步：已完成同步'
   },
   [SyncState.Syncing]: {
     icon: '$(sync~spin)',
-    text: 'Syncing...',
-    tooltip: 'Antigravity Sync: Syncing changes...'
+    text: '同步中...',
+    tooltip: 'Antigravity 同步：正在同步...'
   },
   [SyncState.Pushing]: {
     icon: '$(cloud-upload)',
-    text: 'Pushing...',
-    tooltip: 'Antigravity Sync: Pushing changes to remote...'
+    text: '推送中...',
+    tooltip: 'Antigravity 同步：正在推送...'
   },
   [SyncState.Pulling]: {
     icon: '$(cloud-download)',
-    text: 'Pulling...',
-    tooltip: 'Antigravity Sync: Pulling changes from remote...'
+    text: '拉取中...',
+    tooltip: 'Antigravity 同步：正在拉取...'
   },
   [SyncState.Pending]: {
     icon: '$(circle-outline)',
-    text: 'Pending',
-    tooltip: 'Antigravity Sync: Changes pending - click to push'
+    text: '待同步',
+    tooltip: 'Antigravity 同步：有待同步变更，点击查看'
   },
   [SyncState.Error]: {
     icon: '$(error)',
-    text: 'Error',
-    tooltip: 'Antigravity Sync: Sync error - click to retry',
+    text: '错误',
+    tooltip: 'Antigravity 同步：同步失败，点击重试',
     color: new vscode.ThemeColor('errorForeground')
   },
   [SyncState.NotConfigured]: {
     icon: '$(gear)',
-    text: 'Configure',
-    tooltip: 'Antigravity Sync: Click to configure'
+    text: '未配置',
+    tooltip: 'Antigravity 同步：点击配置'
   }
 };
 
@@ -103,7 +103,7 @@ export class StatusBarService {
       : errorMessage;
 
     this.statusBarItem.text = `$(error) ${shortMessage}`;
-    this.statusBarItem.tooltip = `Antigravity Sync Error: ${errorMessage}\n\nClick to retry`;
+    this.statusBarItem.tooltip = `Antigravity 同步错误：${errorMessage}\n\n点击重试`;
     this.statusBarItem.color = new vscode.ThemeColor('errorForeground');
     this.statusBarItem.command = 'antigravitySync.syncNow';
   }

@@ -1,7 +1,7 @@
 /**
  * ConfigService Unit Tests
  */
-import { ConfigService, SyncConfig } from '../../services/ConfigService';
+import { ConfigService } from '../../services/ConfigService';
 import * as vscode from 'vscode';
 
 // Mock vscode module
@@ -45,22 +45,28 @@ describe('ConfigService', () => {
     it('should return default config values', () => {
       const config = configService.getConfig();
 
+      expect(config.enabled).toBe(true);
       expect(config.autoSync).toBe(true);
       expect(config.syncIntervalMinutes).toBe(5);
       expect(config.excludePatterns).toEqual([]);
+      expect(config.syncFolders).toEqual(['knowledge', 'brain', 'conversations', 'skills', 'annotations']);
     });
 
     it('should use custom values when configured', () => {
       mockConfig.get.mockImplementation((key: string, defaultValue: any) => {
+        if (key === 'enabled') return false;
         if (key === 'autoSync') return false;
         if (key === 'syncIntervalMinutes') return 10;
+        if (key === 'syncFolders') return ['knowledge'];
         return defaultValue;
       });
 
       const config = configService.getConfig();
 
+      expect(config.enabled).toBe(false);
       expect(config.autoSync).toBe(false);
       expect(config.syncIntervalMinutes).toBe(10);
+      expect(config.syncFolders).toEqual(['knowledge']);
     });
   });
 

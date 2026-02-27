@@ -12,6 +12,7 @@ const execAsync = promisify(exec);
 
 export interface SyncConfig {
   repositoryUrl: string;
+  enabled: boolean;
   autoSync: boolean;
   syncIntervalMinutes: number;
   excludePatterns: string[];
@@ -33,11 +34,15 @@ export class ConfigService {
     const config = vscode.workspace.getConfiguration('antigravitySync');
     return {
       repositoryUrl: config.get<string>('repositoryUrl', ''),
+      enabled: config.get<boolean>('enabled', true),
       autoSync: config.get<boolean>('autoSync', true),
       syncIntervalMinutes: config.get<number>('syncIntervalMinutes', 5),
       excludePatterns: config.get<string[]>('excludePatterns', []),
       geminiPath: config.get<string>('geminiPath', '') || this.getDefaultGeminiPath(),
-      syncFolders: config.get<string[]>('syncFolders', ['knowledge'])
+      syncFolders: config.get<string[]>(
+        'syncFolders',
+        ['knowledge', 'brain', 'conversations', 'skills', 'annotations']
+      )
     };
   }
 
@@ -74,7 +79,7 @@ export class ConfigService {
   async saveCredentials(token: string): Promise<void> {
     const config = this.getConfig();
     if (!config.repositoryUrl) {
-      throw new Error('Repository URL must be set before saving credentials');
+      throw new Error('请先设置仓库地址再保存凭据');
     }
     await this.storeGitCredentials(config.repositoryUrl, token);
   }
@@ -106,7 +111,7 @@ export class ConfigService {
   private async storeGitCredentials(url: string, token: string): Promise<void> {
     const parsed = this.parseGitUrl(url);
     if (!parsed) {
-      throw new Error('Invalid Git URL');
+      throw new Error('无效的 Git 仓库地址');
     }
 
     // Configure credential helper first

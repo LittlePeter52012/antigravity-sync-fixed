@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Handle messages from extension
 interface ConfiguredMessage {
   type: 'configured';
-  data: { configured: boolean; repoUrl?: string; syncFolders?: string[] };
+  data: { configured: boolean; repoUrl?: string; syncFolders?: string[]; syncEnabled?: boolean };
 }
 
 interface StatusMessage {
@@ -108,7 +108,7 @@ window.addEventListener('message', (event: MessageEvent<ExtensionMessage>) => {
 
   switch (message.type) {
     case 'configured':
-      showConfigured(message.data.configured, message.data.repoUrl, message.data.syncFolders);
+      showConfigured(message.data.configured, message.data.repoUrl, message.data.syncFolders, message.data.syncEnabled);
       break;
     case 'updateStatus':
       updateStatus(message.data.status, message.data.lastSync);

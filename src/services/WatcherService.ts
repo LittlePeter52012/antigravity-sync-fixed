@@ -23,7 +23,11 @@ export class WatcherService {
   start(): void {
     const config = this.configService.getConfig();
 
-    if (!config.autoSync) {
+    if (!config.enabled || !config.autoSync) {
+      return;
+    }
+
+    if (this.watcher) {
       return;
     }
 
@@ -52,9 +56,9 @@ export class WatcherService {
       .on('add', path => this.handleChange('add', path))
       .on('change', path => this.handleChange('change', path))
       .on('unlink', path => this.handleChange('unlink', path))
-      .on('error', error => console.error('Watcher error:', error));
+      .on('error', error => console.error('监听器错误：', error));
 
-    console.log(`Watching for changes in: ${config.geminiPath}`);
+    console.log(`正在监听目录变更：${config.geminiPath}`);
   }
 
   /**
@@ -78,7 +82,14 @@ export class WatcherService {
    * Handle file change with debouncing
    */
   private handleChange(event: string, filePath: string): void {
-    console.log(`File ${event}: ${filePath}`);
+    const eventLabel = event === 'add'
+      ? '新增'
+      : event === 'change'
+        ? '修改'
+        : event === 'unlink'
+          ? '删除'
+          : event;
+    console.log(`文件${eventLabel}：${filePath}`);
     this.pendingChanges.add(filePath);
 
     // Clear existing timer
@@ -103,13 +114,19 @@ export class WatcherService {
       return;
     }
 
-    console.log(`Syncing ${this.pendingChanges.size} pending changes...`);
+    const config = this.configService.getConfig();
+    if (!config.enabled || !config.autoSync) {
+      this.pendingChanges.clear();
+      return;
+    }
+
+    console.log(`检测到 ${this.pendingChanges.size} 个待同步变更，正在同步...`);
     this.pendingChanges.clear();
 
     try {
       await this.syncService.push();
     } catch (error) {
-      console.error('Auto-sync failed:', error);
+      console.error('自动同步失败：', error);
     }
   }
 }

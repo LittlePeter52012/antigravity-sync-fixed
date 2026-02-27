@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-02-27
+
+### Added
+- 默认同步目录新增 `skills/`、`annotations/`
+- 同步开关生效（禁用后不再自动同步）
+
+### Changed
+- 插件身份、仓库链接更新为私有化版本
+- 配置流程统一校验（私有仓库、令牌权限）
+- 面板/通知/状态栏全面中文化
+- 自动同步间隔改为读取配置值
+
+### Fixed
+- 切换仓库后 `origin` 仍指向旧仓库的问题
+
 ## [0.3.3] - 2026-01-22
 
 ### Changed

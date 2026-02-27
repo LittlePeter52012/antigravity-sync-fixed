@@ -1,20 +1,20 @@
 {
-  "name": "antigravity-sync",
-  "displayName": "Antigravity Auto Retry/Sync",
-  "description": "Auto-sync AI context + Auto-accept/retry for AI coding agents. Zero-babysitting automation.",
-  "version": "0.3.3",
-  "publisher": "mrd9999",
-  "author": "Dung Le <https://www.facebook.com/mrd.900s>",
+  "name": "antigravity-sync-fixed",
+  "displayName": "Antigravity 同步与自动重试",
+  "description": "自动同步 AI 上下文 + 自动重试（Auto Retry），减少看护与手动操作。",
+  "version": "0.4.0",
+  "publisher": "LittlePeter52012",
+  "author": "LittlePeter52012",
   "icon": "resources/icons/icon.png",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/mrd9999/antigravity-sync"
+    "url": "https://github.com/LittlePeter52012/antigravity-sync-fixed"
   },
   "bugs": {
-    "url": "https://github.com/mrd9999/antigravity-sync/issues"
+    "url": "https://github.com/LittlePeter52012/antigravity-sync-fixed/issues"
   },
-  "homepage": "https://github.com/mrd9999/antigravity-sync#readme",
+  "homepage": "https://github.com/LittlePeter52012/antigravity-sync-fixed#readme",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -41,77 +41,77 @@
     "commands": [
       {
         "command": "antigravitySync.configure",
-        "title": "Antigravity Sync: Configure Repository",
+        "title": "Antigravity 同步：配置仓库",
         "icon": "$(gear)"
       },
       {
         "command": "antigravitySync.syncNow",
-        "title": "Antigravity Sync: Sync Now",
+        "title": "Antigravity 同步：立即同步",
         "icon": "$(sync)"
       },
       {
         "command": "antigravitySync.push",
-        "title": "Antigravity Sync: Push Changes",
+        "title": "Antigravity 同步：推送更改",
         "icon": "$(cloud-upload)"
       },
       {
         "command": "antigravitySync.pull",
-        "title": "Antigravity Sync: Pull Changes",
+        "title": "Antigravity 同步：拉取更改",
         "icon": "$(cloud-download)"
       },
       {
         "command": "antigravitySync.showStatus",
-        "title": "Antigravity Sync: Show Status",
+        "title": "Antigravity 同步：查看状态",
         "icon": "$(info)"
       },
       {
         "command": "antigravitySync.openPanel",
-        "title": "Antigravity Sync: Open Panel",
+        "title": "Antigravity 同步：打开面板",
         "icon": "$(window)"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "antigravity-sync",
-          "title": "Antigravity Sync",
+          "id": "antigravity-sync-fixed",
+          "title": "Antigravity 同步",
           "icon": "resources/icons/sidebar.svg"
         }
       ]
     },
     "views": {
-      "antigravity-sync": [
+      "antigravity-sync-fixed": [
         {
           "type": "webview",
           "id": "antigravitySync.mainPanel",
-          "name": "Sync Dashboard"
+          "name": "同步面板"
         }
       ]
     },
     "configuration": {
-      "title": "Antigravity Sync",
+      "title": "Antigravity 同步",
       "properties": {
         "antigravitySync.repositoryUrl": {
           "type": "string",
           "default": "",
-          "description": "GitHub repository URL for syncing (must be private)"
+          "description": "用于同步的私有 Git 仓库地址（必须是私有仓库）"
         },
         "antigravitySync.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Enable or disable Antigravity Sync completely"
+          "description": "启用或禁用自动同步功能"
         },
         "antigravitySync.autoSync": {
           "type": "boolean",
           "default": true,
-          "description": "Automatically sync changes when files change"
+          "description": "文件变更时自动同步"
         },
         "antigravitySync.syncIntervalMinutes": {
           "type": "number",
           "default": 5,
           "minimum": 1,
           "maximum": 60,
-          "description": "Auto-sync interval in minutes"
+          "description": "自动同步间隔（分钟）"
         },
         "antigravitySync.excludePatterns": {
           "type": "array",
@@ -119,68 +119,71 @@
           "items": {
             "type": "string"
           },
-          "description": "Additional patterns to exclude from sync"
+          "description": "额外排除的文件/目录规则"
         },
         "antigravitySync.geminiPath": {
           "type": "string",
           "default": "",
-          "description": "Custom path to .gemini folder (default: ~/.gemini)"
+          "description": ".gemini 目录自定义路径（默认：~/.gemini/antigravity）"
         },
         "antigravitySync.syncFolders": {
           "type": "array",
           "default": [
             "knowledge",
-            "antigravity"
+            "brain",
+            "conversations",
+            "skills",
+            "annotations"
           ],
           "items": {
             "type": "string"
           },
-          "description": "Folders to sync within .gemini directory"
+          "description": "在 .gemini 中需要同步的目录"
         },
         "antigravitySync.autoRetryEnabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable auto-accept for AI agent buttons (requires CDP setup)"
+          "description": "启用自动重试（需要配置 CDP 调试端口）"
         },
         "antigravitySync.autoStartRetry": {
           "type": "boolean",
           "default": false,
-          "description": "Automatically start Auto Retry when IDE launches"
+          "description": "IDE 启动时自动开启自动重试"
         },
         "antigravitySync.cdpPort": {
           "type": "number",
           "default": 31905,
           "minimum": 1024,
           "maximum": 65535,
-          "description": "CDP remote debugging port for auto-accept"
+          "description": "CDP 远程调试端口（用于自动重试）"
         },
         "antigravitySync.cdpPortRange": {
           "type": "number",
           "default": 3,
           "minimum": 0,
           "maximum": 10,
-          "description": "Port range to scan (port ± range)"
+          "description": "扫描端口范围（端口 ± 范围）"
         },
         "antigravitySync.autoRetryInterval": {
           "type": "number",
           "default": 3,
           "minimum": 1,
           "maximum": 30,
-          "description": "Interval in seconds between retry checks"
+          "description": "自动重试检查间隔（秒）"
         },
         "antigravitySync.autoRetryMaxRetries": {
           "type": "number",
           "default": 50,
           "minimum": 1,
           "maximum": 500,
-          "description": "Maximum number of auto-retries before stopping"
+          "description": "自动重试最大次数"
         },
         "antigravitySync.autoRetryCooldown": {
           "type": "number",
           "default": 5,
           "minimum": 1,
           "maximum": 60,
-          "description": "Cooldown in seconds after clicking retry button"
+          "description": "点击重试按钮后的冷却时间（秒）"
         }
       }
     }

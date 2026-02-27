@@ -23,9 +23,6 @@ function ts(): string {
   return `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}]`;
 }
 
-// Default auto-sync interval: 5 minutes
-const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000;
-
 // Lock file settings - prevent multiple VS Code windows from syncing simultaneously
 const LOCK_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes - stale lock timeout
 
@@ -62,7 +59,7 @@ export class SyncService {
     const token = await this.configService.getCredentials();
 
     if (!config.repositoryUrl || !token) {
-      throw new Error('Repository or access token not configured');
+      throw new Error('仓库地址或访问令牌未配置');
     }
 
     // Initialize Git service
@@ -104,11 +101,11 @@ export class SyncService {
         const lockTime = parseInt(fs.readFileSync(lockFile, 'utf-8'));
         if (Date.now() - lockTime > LOCK_TIMEOUT_MS) {
           // Lock is stale (> 5 min), remove it
-          console.log(ts() + ' [SyncService] Stale lock detected, removing...');
+          console.log(ts() + ' [SyncService] 检测到过期锁，正在清理...');
           fs.unlinkSync(lockFile);
         } else {
           // Lock is still valid
-          console.log(ts() + ' [SyncService] Another sync in progress, skipping...');
+          console.log(ts() + ' [SyncService] 另一个同步正在进行，已跳过');
           return false;
         }
       } catch {
@@ -120,11 +117,11 @@ export class SyncService {
     // Try to create lock atomically
     try {
       fs.writeFileSync(lockFile, Date.now().toString(), { flag: 'wx' });
-      console.log(ts() + ' [SyncService] Lock acquired');
+      console.log(ts() + ' [SyncService] 已获取同步锁');
       return true;
     } catch {
       // Another process got the lock first
-      console.log(ts() + ' [SyncService] Failed to acquire lock, another sync started');
+      console.log(ts() + ' [SyncService] 获取同步锁失败，另一个同步已启动');
       return false;
     }
   }
@@ -137,7 +134,7 @@ export class SyncService {
     try {
       if (fs.existsSync(lockFile)) {
         fs.unlinkSync(lockFile);
-        console.log(ts() + ' [SyncService] Lock released');
+        console.log(ts() + ' [SyncService] 已释放同步锁');
       }
     } catch {
       // Ignore errors when releasing lock
@@ -149,7 +146,7 @@ export class SyncService {
    */
   async sync(): Promise<void> {
     if (this.isSyncing) {
-      console.log(ts() + ' [SyncService.sync] Already syncing in this window, skipping...');
+      console.log(ts() + ' [SyncService.sync] 当前窗口正在同步，已跳过');
       return;
     }
 
@@ -160,21 +157,21 @@ export class SyncService {
 
     this.isSyncing = true;
     this.statusBar.update(SyncState.Syncing);
-    console.log(ts() + ' [SyncService.sync] === SYNC STARTED ===');
+    console.log(ts() + ' [SyncService.sync] === 开始同步 ===');
 
     try {
       // Pull remote changes first
-      console.log(ts() + ' [SyncService.sync] Step 1: Pulling remote changes...');
+      console.log(ts() + ' [SyncService.sync] 步骤 1：拉取远端更改...');
       await this.pull();
 
       // Push local changes (no need to pull again, already done)
-      console.log(ts() + ' [SyncService.sync] Step 2: Pushing local changes...');
+      console.log(ts() + ' [SyncService.sync] 步骤 2：推送本地更改...');
       await this.pushWithoutPull();
 
-      console.log(ts() + ' [SyncService.sync] === SYNC COMPLETE ===');
+      console.log(ts() + ' [SyncService.sync] === 同步完成 ===');
       this.statusBar.update(SyncState.Synced);
     } catch (error) {
-      console.log(ts() + ` [SyncService.sync] Sync failed: ${(error as Error).message}`);
+      console.log(ts() + ` [SyncService.sync] 同步失败：${(error as Error).message}`);
       this.statusBar.update(SyncState.Error);
       throw error;
     } finally {
@@ -188,41 +185,41 @@ export class SyncService {
    */
   async push(): Promise<void> {
     if (!this.gitService) {
-      throw new Error('Sync not initialized');
+      throw new Error('同步尚未初始化');
     }
 
     this.statusBar.update(SyncState.Pushing);
-    console.log('[SyncService.push] === PUSH STARTED ===');
+    console.log('[SyncService.push] === 开始推送 ===');
 
     try {
       // Pull first to avoid divergent branches (when called standalone)
-      console.log('[SyncService.push] Step 1: Pulling to avoid divergence...');
+      console.log('[SyncService.push] 步骤 1：先拉取以避免分支分叉...');
       await this.gitService.pull();
 
       // Copy filtered files to sync repo
-      console.log('[SyncService.push] Step 2: Copying local files to sync repo...');
+      console.log('[SyncService.push] 步骤 2：复制本地文件到同步仓库...');
       const filesCopied = await this.copyFilesToSyncRepo();
-      console.log(`[SyncService.push] Copied ${filesCopied} files to sync repo`);
+      console.log(`[SyncService.push] 已复制 ${filesCopied} 个文件到同步仓库`);
 
       // Stage and commit
-      console.log('[SyncService.push] Step 3: Staging and committing...');
+      console.log('[SyncService.push] 步骤 3：暂存并提交...');
       await this.gitService.stageAll();
       const commitHash = await this.gitService.commit(
-        `Sync: ${new Date().toISOString()}`
+        `同步：${new Date().toISOString()}`
       );
 
       if (commitHash) {
-        console.log(`[SyncService.push] Step 4: Pushing commit ${commitHash.substring(0, 7)}...`);
+        console.log(`[SyncService.push] 步骤 4：推送提交 ${commitHash.substring(0, 7)}...`);
         await this.gitService.push();
-        console.log('[SyncService.push] Push successful!');
+        console.log('[SyncService.push] 推送成功！');
       } else {
-        console.log('[SyncService.push] No changes to commit');
+        console.log('[SyncService.push] 没有需要提交的更改');
       }
 
-      console.log('[SyncService.push] === PUSH COMPLETE ===');
+      console.log('[SyncService.push] === 推送完成 ===');
       this.statusBar.update(SyncState.Synced);
     } catch (error) {
-      console.log(`[SyncService.push] Push failed: ${(error as Error).message}`);
+      console.log(`[SyncService.push] 推送失败：${(error as Error).message}`);
       this.statusBar.update(SyncState.Error);
       throw error;
     }
@@ -233,27 +230,27 @@ export class SyncService {
    */
   private async pushWithoutPull(): Promise<void> {
     if (!this.gitService) {
-      throw new Error('Sync not initialized');
+      throw new Error('同步尚未初始化');
     }
 
     // Copy filtered files to sync repo
-    console.log('[SyncService.pushWithoutPull] Copying local files to sync repo...');
+    console.log('[SyncService.pushWithoutPull] 复制本地文件到同步仓库...');
     const filesCopied = await this.copyFilesToSyncRepo();
-    console.log(`[SyncService.pushWithoutPull] Copied ${filesCopied} files`);
+    console.log(`[SyncService.pushWithoutPull] 已复制 ${filesCopied} 个文件`);
 
     // Stage and commit
-    console.log('[SyncService.pushWithoutPull] Staging and committing...');
+    console.log('[SyncService.pushWithoutPull] 暂存并提交...');
     await this.gitService.stageAll();
     const commitHash = await this.gitService.commit(
-      `Sync: ${new Date().toISOString()}`
+      `同步：${new Date().toISOString()}`
     );
 
     if (commitHash) {
-      console.log(`[SyncService.pushWithoutPull] Pushing commit ${commitHash.substring(0, 7)}...`);
+      console.log(`[SyncService.pushWithoutPull] 推送提交 ${commitHash.substring(0, 7)}...`);
       await this.gitService.push();
-      console.log('[SyncService.pushWithoutPull] Push successful!');
+      console.log('[SyncService.pushWithoutPull] 推送成功！');
     } else {
-      console.log('[SyncService.pushWithoutPull] No changes to commit');
+      console.log('[SyncService.pushWithoutPull] 没有需要提交的更改');
     }
   }
 
@@ -262,23 +259,23 @@ export class SyncService {
    */
   async pull(): Promise<void> {
     if (!this.gitService) {
-      throw new Error('Sync not initialized');
+      throw new Error('同步尚未初始化');
     }
 
     this.statusBar.update(SyncState.Pulling);
-    console.log('[SyncService.pull] === PULL STARTED ===');
+    console.log('[SyncService.pull] === 开始拉取 ===');
 
     try {
       await this.gitService.pull();
 
-      console.log('[SyncService.pull] Copying files from sync repo to Gemini folder...');
+      console.log('[SyncService.pull] 正在从同步仓库复制文件到 Gemini 目录...');
       const filesCopied = await this.copyFilesFromSyncRepo();
-      console.log(`[SyncService.pull] Copied ${filesCopied} files to Gemini folder`);
+      console.log(`[SyncService.pull] 已复制 ${filesCopied} 个文件到 Gemini 目录`);
 
-      console.log('[SyncService.pull] === PULL COMPLETE ===');
+      console.log('[SyncService.pull] === 拉取完成 ===');
       this.statusBar.update(SyncState.Synced);
     } catch (error) {
-      console.log(`[SyncService.pull] Pull failed: ${(error as Error).message}`);
+      console.log(`[SyncService.pull] 拉取失败：${(error as Error).message}`);
       this.statusBar.update(SyncState.Error);
       throw error;
     }
@@ -298,7 +295,7 @@ export class SyncService {
     }
 
     return {
-      syncStatus: this.isSyncing ? 'Syncing...' : 'Ready',
+      syncStatus: this.isSyncing ? '同步中...' : '就绪',
       lastSync,
       pendingChanges,
       repository: config.repositoryUrl || null
@@ -454,7 +451,13 @@ export class SyncService {
   startAutoSync(): void {
     this.stopAutoSync(); // Clear any existing timer
 
-    this.nextSyncTime = Date.now() + AUTO_SYNC_INTERVAL_MS;
+    const config = this.configService.getConfig();
+    if (!config.enabled || !config.autoSync) {
+      return;
+    }
+
+    const intervalMs = Math.max(1, config.syncIntervalMinutes) * 60 * 1000;
+    this.nextSyncTime = Date.now() + intervalMs;
 
     // Start countdown interval (every second)
     this.countdownInterval = setInterval(() => {
@@ -468,11 +471,11 @@ export class SyncService {
     this.autoSyncTimer = setInterval(async () => {
       try {
         await this.sync();
-        this.nextSyncTime = Date.now() + AUTO_SYNC_INTERVAL_MS;
+        this.nextSyncTime = Date.now() + intervalMs;
       } catch (error) {
-        console.error('Auto-sync failed:', error);
+        console.error('自动同步失败：', error);
       }
-    }, AUTO_SYNC_INTERVAL_MS);
+    }, intervalMs);
   }
 
   /**

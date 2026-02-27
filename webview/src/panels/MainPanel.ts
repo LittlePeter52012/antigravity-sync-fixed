@@ -16,24 +16,24 @@ export class MainPanel {
         <section id="config-section" class="config-section">
           <div class="section-header">
             <span class="codicon codicon-gear"></span>
-            <h3>Setup</h3>
+            <h3>设置</h3>
           </div>
           
-          <p class="description">Sync your Gemini context to a private Git repository.</p>
+          <p class="description">将 Gemini 上下文同步到私有 Git 仓库。</p>
           
           <div class="form-group">
-            <label for="repo-url-input">Repository URL</label>
+            <label for="repo-url-input">仓库地址</label>
             <vscode-text-field id="repo-url-input" placeholder="https://host/user/repo" class="full-width"></vscode-text-field>
           </div>
           
           <div class="form-group">
-            <label for="pat-input">Access Token</label>
-            <vscode-text-field id="pat-input" type="password" placeholder="Token with repo access" class="full-width"></vscode-text-field>
-            <span class="hint">Token needs repository read/write access</span>
+            <label for="pat-input">访问令牌</label>
+            <vscode-text-field id="pat-input" type="password" placeholder="具有仓库访问权限的令牌" class="full-width"></vscode-text-field>
+            <span class="hint">令牌需要仓库读写权限</span>
           </div>
           
           <vscode-button id="btn-save-config" class="full-width" style="display: flex; justify-content: center; text-align: center;">
-            <span id="btn-connect-text" style="width: 100%; text-align: center;">Connect Repository</span>
+            <span id="btn-connect-text" style="width: 100%; text-align: center;">连接仓库</span>
             <span id="btn-connect-spinner" class="codicon codicon-sync codicon-modifier-spin" style="display: none;"></span>
           </vscode-button>
           
@@ -45,28 +45,28 @@ export class MainPanel {
           <vscode-divider></vscode-divider>
           <div class="section-header">
             <span class="codicon codicon-zap"></span>
-            <span class="section-title">Auto Retry</span>
-            <span id="auto-retry-status" class="status-badge" style="margin-left: auto; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground);">OFF</span>
+            <span class="section-title">自动重试</span>
+            <span id="auto-retry-status" class="status-badge" style="margin-left: auto; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground);">关</span>
           </div>
           <p class="description" style="font-size: 11px; opacity: 0.8; margin: 0 0 8px 0;">
-            Auto-click Retry buttons when AI agent encounters errors
+            当 AI 代理出错时自动点击 Retry 按钮
           </p>
           
           <!-- Auto Start Checkbox -->
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-            <vscode-checkbox id="chk-auto-start">Auto-start on launch</vscode-checkbox>
+            <vscode-checkbox id="chk-auto-start">启动时自动开启</vscode-checkbox>
           </div>
           
           <!-- Toggle Button (shows Start or Stop based on state) -->
           <div style="display: flex; gap: 8px; margin-bottom: 8px;">
             <vscode-button id="btn-toggle-auto-retry" appearance="primary" style="flex: 1;">
               <span class="codicon codicon-play" id="btn-toggle-icon"></span>
-              <span id="btn-toggle-text">Start</span>
+              <span id="btn-toggle-text">开始</span>
             </vscode-button>
           </div>
           
           <div id="auto-retry-log" class="log-output" style="margin-top: 8px; max-height: 120px;">
-            <div class="log-empty">Click Start to enable auto-retry</div>
+            <div class="log-empty">点击“开始”启用自动重试</div>
           </div>
         </section>
 
@@ -78,13 +78,13 @@ export class MainPanel {
               <span class="codicon codicon-check" id="status-icon"></span>
             </div>
             <div class="status-info">
-              <span class="status-text" id="status-text">Synced</span>
-              <span class="status-time" id="last-sync-time">Just now</span>
+              <span class="status-text" id="status-text">已同步</span>
+              <span class="status-time" id="last-sync-time">刚刚</span>
             </div>
-            <div class="sync-countdown" id="sync-countdown" title="Auto-sync countdown">
+            <div class="sync-countdown" id="sync-countdown" title="自动同步倒计时">
               <span id="countdown-value">--:--</span>
             </div>
-            <vscode-button appearance="icon" id="btn-sync-icon" title="Sync now">
+            <vscode-button appearance="icon" id="btn-sync-icon" title="立即同步">
               <span class="codicon codicon-sync"></span>
             </vscode-button>
           </div>
@@ -93,18 +93,18 @@ export class MainPanel {
           <div class="quick-actions">
             <vscode-button appearance="secondary" id="btn-push">
               <span class="codicon codicon-cloud-upload"></span>
-              Push
+              推送
             </vscode-button>
             <vscode-button appearance="secondary" id="btn-pull">
               <span class="codicon codicon-cloud-download"></span>
-              Pull
+              拉取
             </vscode-button>
           </div>
 
           <!-- Sync Toggle -->
           <div class="sync-toggle-section">
             <div class="toggle-row">
-              <span class="toggle-label">Sync Enabled</span>
+              <span class="toggle-label">同步开关</span>
               <vscode-checkbox id="sync-enabled-toggle" checked></vscode-checkbox>
             </div>
           </div>
@@ -115,8 +115,8 @@ export class MainPanel {
           <div class="repo-section">
             <div class="section-header">
               <span class="codicon codicon-repo"></span>
-              <span class="section-title">Repository</span>
-              <vscode-button appearance="icon" id="btn-disconnect" title="Disconnect">
+              <span class="section-title">仓库</span>
+              <vscode-button appearance="icon" id="btn-disconnect" title="断开连接">
                 <span class="codicon codicon-close"></span>
               </vscode-button>
             </div>
@@ -129,7 +129,7 @@ export class MainPanel {
           <div class="folders-section">
             <div class="section-header">
               <span class="codicon codicon-folder"></span>
-              <span class="section-title">Sync Folders</span>
+              <span class="section-title">同步目录</span>
             </div>
             <div class="folder-list" id="folder-list">
               <label class="folder-item">
@@ -141,6 +141,12 @@ export class MainPanel {
               <label class="folder-item">
                 <vscode-checkbox id="folder-conversations">conversations/</vscode-checkbox>
               </label>
+              <label class="folder-item">
+                <vscode-checkbox id="folder-skills">skills/</vscode-checkbox>
+              </label>
+              <label class="folder-item">
+                <vscode-checkbox id="folder-annotations">annotations/</vscode-checkbox>
+              </label>
             </div>
           </div>
 
@@ -149,8 +155,8 @@ export class MainPanel {
           <!-- Git Status -->
           <div class="git-status-section">
             <div class="section-header">
-              <span class="section-title">SYNC STATUS</span>
-              <vscode-button appearance="icon" id="btn-refresh-status" title="Refresh status">
+              <span class="section-title">同步状态</span>
+              <vscode-button appearance="icon" id="btn-refresh-status" title="刷新状态">
                 <span id="refresh-icon" class="codicon codicon-sync"></span>
               </vscode-button>
             </div>
@@ -158,15 +164,15 @@ export class MainPanel {
               <div class="git-summary" id="git-summary">
                 <div class="git-stat">
                   <span class="git-stat-value" id="git-files-count">0</span>
-                  <span class="git-stat-label">files to push</span>
+                  <span class="git-stat-label">待推送文件</span>
                 </div>
                 <div class="git-stat">
                   <span class="git-stat-value" id="git-behind-count">0</span>
-                  <span class="git-stat-label">commits to pull</span>
+                  <span class="git-stat-label">待拉取提交</span>
                 </div>
               </div>
               <div class="git-files" id="git-files">
-                <div class="git-files-empty">No pending changes</div>
+                <div class="git-files-empty">暂无待同步变更</div>
               </div>
               <div class="git-hint">
                 <code>cd ~/.gemini-sync-repo && git status</code>
@@ -180,13 +186,13 @@ export class MainPanel {
           <div class="log-section">
             <div class="section-header">
               <span class="codicon codicon-terminal"></span>
-              <span class="section-title">Sync Log</span>
-              <vscode-button appearance="icon" id="btn-clear-log" title="Clear log">
+              <span class="section-title">同步日志</span>
+              <vscode-button appearance="icon" id="btn-clear-log" title="清空日志">
                 <span class="codicon codicon-clear-all"></span>
               </vscode-button>
             </div>
             <div class="log-output" id="log-output">
-              <div class="log-empty">Ready</div>
+              <div class="log-empty">就绪</div>
             </div>
           </div>
         </section>
@@ -254,7 +260,7 @@ export class MainPanel {
     });
 
     // Folder checkboxes
-    ['knowledge', 'antigravity', 'brain', 'conversations'].forEach(folder => {
+    ['knowledge', 'brain', 'conversations', 'skills', 'annotations'].forEach(folder => {
       document.getElementById(`folder-${folder}`)?.addEventListener('change', (e) => {
         const target = e.target as HTMLInputElement;
         vscode.postMessage({
@@ -288,7 +294,7 @@ export class MainPanel {
     // Auto Retry - Toggle button
     document.getElementById('btn-toggle-auto-retry')?.addEventListener('click', () => {
       const statusBadge = document.getElementById('auto-retry-status');
-      const isRunning = statusBadge?.textContent === 'ON';
+      const isRunning = statusBadge?.textContent === '开';
       if (isRunning) {
         vscode.postMessage({ type: 'stopAutoRetry' });
       } else {
@@ -308,7 +314,7 @@ export class MainPanel {
 }
 
 // Export function to update UI from extension messages
-export function showConfigured(configured: boolean, repoUrl?: string, syncFolders?: string[]): void {
+export function showConfigured(configured: boolean, repoUrl?: string, syncFolders?: string[], syncEnabled?: boolean): void {
   const configSection = document.getElementById('config-section');
   const dashboardSection = document.getElementById('dashboard-section');
   const repoDisplay = document.getElementById('repo-display');
@@ -330,15 +336,26 @@ export function showConfigured(configured: boolean, repoUrl?: string, syncFolder
   if (syncFolders) {
     updateFolderCheckboxes(syncFolders);
   }
+
+  if (typeof syncEnabled === 'boolean') {
+    updateSyncEnabledToggle(syncEnabled);
+  }
 }
 
 export function updateFolderCheckboxes(syncFolders: string[]): void {
-  const folders = ['knowledge', 'brain', 'conversations'];
+  const folders = ['knowledge', 'brain', 'conversations', 'skills', 'annotations'];
   for (const folder of folders) {
     const checkbox = document.getElementById(`folder-${folder}`) as HTMLInputElement;
     if (checkbox) {
       checkbox.checked = syncFolders.includes(folder);
     }
+  }
+}
+
+export function updateSyncEnabledToggle(enabled: boolean): void {
+  const toggle = document.getElementById('sync-enabled-toggle') as HTMLInputElement;
+  if (toggle) {
+    toggle.checked = enabled;
   }
 }
 
@@ -359,10 +376,10 @@ export function updateStatus(status: 'synced' | 'syncing' | 'error' | 'pending',
     };
 
     const textMap: Record<string, string> = {
-      synced: 'Synced',
-      syncing: 'Syncing...',
-      error: 'Sync Error',
-      pending: 'Changes pending'
+      synced: '已同步',
+      syncing: '同步中...',
+      error: '同步错误',
+      pending: '待同步'
     };
 
     icon.className = `codicon ${iconMap[status]}`;
@@ -419,10 +436,10 @@ function formatRelativeTime(dateString: string): string {
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
 
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  return `${days}d ago`;
+  if (minutes < 1) return '刚刚';
+  if (minutes < 60) return `${minutes}分钟前`;
+  if (hours < 24) return `${hours}小时前`;
+  return `${days}天前`;
 }
 
 export function appendLog(message: string, type: 'success' | 'error' | 'info' = 'info'): void {
@@ -453,7 +470,7 @@ export function appendLog(message: string, type: 'success' | 'error' | 'info' = 
 export function clearLog(): void {
   const logOutput = document.getElementById('log-output');
   if (!logOutput) return;
-  logOutput.innerHTML = '<div class="log-empty">Ready</div>';
+  logOutput.innerHTML = '<div class="log-empty">就绪</div>';
 }
 
 export function updateGitStatus(data: {
@@ -488,14 +505,14 @@ export function updateGitStatus(data: {
   // Update files list
   if (filesEl) {
     if (data.files.length === 0) {
-      filesEl.innerHTML = '<div class="git-files-empty">No pending changes</div>';
+      filesEl.innerHTML = '<div class="git-files-empty">暂无待同步变更</div>';
     } else {
       let html = '<div class="git-files-list">';
       data.files.forEach(file => {
         html += `<div class="git-file-item">${file}</div>`;
       });
       if (data.totalFiles > data.files.length) {
-        html += `<div class="git-file-more">...and ${data.totalFiles - data.files.length} more</div>`;
+        html += `<div class="git-file-more">...还有 ${data.totalFiles - data.files.length} 项</div>`;
       }
       html += '</div>';
       filesEl.innerHTML = html;
@@ -535,7 +552,7 @@ export function updateAutoRetryStatus(running: boolean, retryCount: number, conn
 
   // Update status badge
   if (statusBadge) {
-    statusBadge.textContent = running ? 'ON' : 'OFF';
+    statusBadge.textContent = running ? '开' : '关';
     statusBadge.style.background = running
       ? 'var(--vscode-debugIcon-startForeground)'
       : 'var(--vscode-badge-background)';
@@ -549,11 +566,11 @@ export function updateAutoRetryStatus(running: boolean, retryCount: number, conn
     if (running) {
       toggleBtn.setAttribute('appearance', 'secondary');
       toggleIcon.className = 'codicon codicon-debug-stop';
-      toggleText.textContent = 'Stop';
+      toggleText.textContent = '停止';
     } else {
       toggleBtn.setAttribute('appearance', 'primary');
       toggleIcon.className = 'codicon codicon-play';
-      toggleText.textContent = 'Start';
+      toggleText.textContent = '开始';
     }
   }
 }
@@ -575,15 +592,15 @@ export function updateCDPStatus(available: boolean, hasFlag: boolean, port: numb
     if (available) {
       cdpIcon.className = 'codicon codicon-check';
       cdpIcon.style.color = 'var(--vscode-debugIcon-startForeground)';
-      cdpText.textContent = `CDP: Connected (port ${port})`;
+      cdpText.textContent = `CDP：已连接（端口 ${port}）`;
     } else if (hasFlag) {
       cdpIcon.className = 'codicon codicon-warning';
       cdpIcon.style.color = 'var(--vscode-debugIcon-pauseForeground)';
-      cdpText.textContent = 'CDP: Has flag but not responding';
+      cdpText.textContent = 'CDP：已添加参数但未响应';
     } else {
       cdpIcon.className = 'codicon codicon-circle-outline';
       cdpIcon.style.color = 'var(--vscode-debugIcon-disconnectForeground)';
-      cdpText.textContent = `CDP: Not connected (port ${port})`;
+      cdpText.textContent = `CDP：未连接（端口 ${port}）`;
     }
   }
 
@@ -597,8 +614,8 @@ export function updateCDPStatus(available: boolean, hasFlag: boolean, port: numb
     const empty = logOutput.querySelector('.log-empty');
     if (empty) {
       empty.textContent = hasFlag
-        ? 'CDP not responding. Try restarting IDE.'
-        : `Click "Setup CDP" then restart IDE with --remote-debugging-port=${port}`;
+        ? 'CDP 未响应，请尝试重启 IDE。'
+        : `点击“设置 CDP”后，用 --remote-debugging-port=${port} 重启 IDE`;
     }
   }
 }
