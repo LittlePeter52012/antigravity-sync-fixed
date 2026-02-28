@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.10] - 2026-02-28
+
+### Fixed
+- 拉取恢复策略改为按同步目录逐项恢复，修复历史数据漏恢复问题
+- 拉取时跳过 `.conflict-*` 工件，避免把冲突副本回写到运行目录
+- 当本地文件更新于远端时不覆盖本地，远端版本保存到 `.sync-conflicts/`
+
+### Changed
+- 拉取日志新增详细统计（复制/保留本地较新/冲突快照/跳过工件）
+- 兼容旧版仓库结构（无 `.antigravity-sync` 子目录）自动回退恢复
+
 ## [0.4.9] - 2026-02-27
 
 ### Changed

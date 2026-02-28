@@ -301,10 +301,14 @@ export class SidePanelProvider implements vscode.WebviewViewProvider {
     this.updateStatus('syncing');
     this.sendLog('正在拉取...', 'info');
     try {
-      await NotificationService.withProgress('正在拉取...', async () => {
-        await this._syncService.pull();
+      const pullStats = await NotificationService.withProgress('正在拉取...', async () => {
+        return await this._syncService.pull();
       });
       this.updateStatus('synced');
+      this.sendLog(
+        `拉取统计：复制 ${pullStats.copied}，保留本地较新 ${pullStats.skippedLocalNewer}，冲突快照 ${pullStats.conflictCopies}，跳过冲突工件 ${pullStats.skippedConflictArtifacts}`,
+        'info'
+      );
       this.sendLog('拉取完成', 'success');
       await this.sendGitStatus();
     } catch (error) {

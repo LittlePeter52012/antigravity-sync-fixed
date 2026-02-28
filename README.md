@@ -85,6 +85,15 @@
 
 ---
 
+## 冲突与恢复策略
+
+- 拉取仅恢复已配置同步目录（默认 `knowledge/ brain/ conversations/ skills/ annotations/`）
+- 对本地较新的文件：保留本地，不强制覆盖
+- 远端版本会保存到 `~/.gemini/antigravity/.sync-conflicts/` 供人工检查
+- 仓库中的 `.conflict-*` 冲突工件不会回写到运行目录
+
+---
+
 ## 版权与致谢
 
 本项目基于 **mrd9999/antigravity-sync** 二次开发，遵循原项目 **MIT License**。

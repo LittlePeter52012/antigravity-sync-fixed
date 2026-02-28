@@ -18,6 +18,13 @@ export interface SyncStatus {
   repository: string | null;
 }
 
+export interface PullStats {
+  copied: number;
+  skippedLocalNewer: number;
+  conflictCopies: number;
+  skippedConflictArtifacts: number;
+}
+
 // Helper to format timestamp
 function ts(): string {
   const now = new Date();
@@ -170,7 +177,13 @@ export class SyncService {
     try {
       // Pull remote changes first
       console.log(ts() + ' [SyncService.sync] 步骤 1：拉取远端更改...');
-      await this.pull();
+      const pullStats = await this.pull();
+      if (pullStats.skippedLocalNewer > 0) {
+        console.log(
+          ts() +
+          ` [SyncService.sync] 检测到 ${pullStats.skippedLocalNewer} 个本地较新文件，已保留本地并生成 ${pullStats.conflictCopies} 个远端冲突副本`
+        );
+      }
 
       // Push local changes (no need to pull again, already done)
       console.log(ts() + ' [SyncService.sync] 步骤 2：推送本地更改...');
@@ -265,7 +278,7 @@ export class SyncService {
   /**
    * Pull remote changes to local
    */
-  async pull(): Promise<void> {
+  async pull(): Promise<PullStats> {
     if (!this.gitService) {
       throw new Error('同步尚未初始化');
     }
@@ -277,11 +290,17 @@ export class SyncService {
       await this.gitService.pull();
 
       console.log('[SyncService.pull] 正在从同步仓库复制文件到 Gemini 目录...');
-      const filesCopied = await this.copyFilesFromSyncRepo();
-      console.log(`[SyncService.pull] 已复制 ${filesCopied} 个文件到 Gemini 目录`);
+      const pullStats = await this.copyFilesFromSyncRepo();
+      console.log(
+        `[SyncService.pull] 已复制 ${pullStats.copied} 个文件，` +
+        `本地较新保留 ${pullStats.skippedLocalNewer} 个，` +
+        `冲突副本 ${pullStats.conflictCopies} 个，` +
+        `已跳过冲突工件 ${pullStats.skippedConflictArtifacts} 个`
+      );
 
       console.log('[SyncService.pull] === 拉取完成 ===');
       this.statusBar.update(SyncState.Synced);
+      return pullStats;
     } catch (error) {
       console.log(`[SyncService.pull] 拉取失败：${(error as Error).message}`);
       this.statusBar.update(SyncState.Error);
@@ -363,6 +382,7 @@ export class SyncService {
   private async copyFilesToSyncRepo(): Promise<number> {
     const config = this.configService.getConfig();
     const syncDataRoot = this.getSyncDataRoot(config);
+    const legacyRoot = this.configService.getSyncRepoPath();
 
     if (!this.filterService) {
       return 0;
@@ -405,64 +425,159 @@ export class SyncService {
 
   /**
    * Copy files from sync repo back to gemini folder
-   * @returns number of files copied
+   * Cloud-style restore policy:
+   * - copy missing/older files from repo to local
+   * - keep local file when it is newer, and save remote version as conflict snapshot
+   * - never copy `.conflict-*` artifacts into runtime folders
    */
-  private async copyFilesFromSyncRepo(): Promise<number> {
+  private async copyFilesFromSyncRepo(): Promise<PullStats> {
     const config = this.configService.getConfig();
     const syncDataRoot = this.getSyncDataRoot(config);
+    const legacyRoot = this.configService.getSyncRepoPath();
+    const stats: PullStats = {
+      copied: 0,
+      skippedLocalNewer: 0,
+      conflictCopies: 0,
+      skippedConflictArtifacts: 0
+    };
 
-    // Walk sync subdir and copy back (excluding metadata)
-    return await this.copyDirectoryContents(syncDataRoot, config.geminiPath, ['.sync']);
+    const configuredFolders = config.syncFolders.length > 0
+      ? config.syncFolders
+      : ['knowledge', 'brain', 'conversations', 'skills', 'annotations'];
+
+    const hasDataInSubdir = configuredFolders.some(folder => fs.existsSync(path.join(syncDataRoot, folder)));
+    const hasDataInLegacyRoot = configuredFolders.some(folder => fs.existsSync(path.join(legacyRoot, folder)));
+    const sourceRoot = hasDataInSubdir ? syncDataRoot : (hasDataInLegacyRoot ? legacyRoot : syncDataRoot);
+    if (sourceRoot === legacyRoot && sourceRoot !== syncDataRoot) {
+      console.log('[SyncService.pull] 检测到旧版仓库结构，正在从仓库根目录恢复数据');
+    }
+
+    for (const folder of configuredFolders) {
+      const sourcePath = path.join(sourceRoot, folder);
+      const destPath = path.join(config.geminiPath, folder);
+      await this.copyFolderFromRepo(sourcePath, destPath, folder, config, stats);
+    }
+
+    return stats;
   }
 
   /**
-   * Recursively copy directory contents
-   * @returns number of files copied
+   * Recursively copy one synced folder from repo to local path with conflict-safe policy
    */
-  private async copyDirectoryContents(
+  private async copyFolderFromRepo(
     source: string,
     dest: string,
-    excludeDirs: string[] = []
-  ): Promise<number> {
+    relativeRoot: string,
+    config: SyncConfig,
+    stats: PullStats
+  ): Promise<void> {
     if (!fs.existsSync(source)) {
-      return 0;
+      return;
     }
 
-    let count = 0;
     const entries = fs.readdirSync(source, { withFileTypes: true });
 
     for (const entry of entries) {
-      if (excludeDirs.includes(entry.name)) {
-        continue;
-      }
-
       const sourcePath = path.join(source, entry.name);
       const destPath = path.join(dest, entry.name);
+      const relativePath = path.posix.join(relativeRoot.replace(/\\/g, '/'), entry.name);
 
       if (entry.isDirectory()) {
-        count += await this.copyDirectoryContents(sourcePath, destPath, excludeDirs);
+        if (entry.name === '.sync') {
+          continue;
+        }
+        await this.copyFolderFromRepo(sourcePath, destPath, relativePath, config, stats);
       } else {
+        if (this.filterService?.shouldIgnore(relativePath)) {
+          continue;
+        }
+        if (entry.name.includes('.conflict-')) {
+          stats.skippedConflictArtifacts++;
+          continue;
+        }
+
         const destDir = path.dirname(destPath);
         if (!fs.existsSync(destDir)) {
           fs.mkdirSync(destDir, { recursive: true });
         }
+
         const sourceStat = fs.statSync(sourcePath);
-        let shouldCopy = true;
         if (fs.existsSync(destPath)) {
           const destStat = fs.statSync(destPath);
-          if (destStat.size === sourceStat.size && destStat.mtimeMs === sourceStat.mtimeMs) {
-            shouldCopy = false;
+          const equal = this.areFilesEqual(sourcePath, destPath, sourceStat, destStat);
+          if (equal) {
+            continue;
+          }
+
+          // Keep local newer file and archive pulled version for manual review.
+          if (destStat.mtimeMs > sourceStat.mtimeMs + 1000) {
+            stats.skippedLocalNewer++;
+            if (this.writePulledConflictSnapshot(config.geminiPath, relativePath, sourcePath, sourceStat.mtimeMs)) {
+              stats.conflictCopies++;
+            }
+            continue;
           }
         }
-        if (shouldCopy) {
-          fs.copyFileSync(sourcePath, destPath);
-          fs.utimesSync(destPath, sourceStat.atime, sourceStat.mtime);
-          count++;
-        }
+
+        fs.copyFileSync(sourcePath, destPath);
+        fs.utimesSync(destPath, sourceStat.atime, sourceStat.mtime);
+        stats.copied++;
       }
     }
+  }
 
-    return count;
+  private areFilesEqual(
+    sourcePath: string,
+    destPath: string,
+    sourceStat: fs.Stats,
+    destStat: fs.Stats
+  ): boolean {
+    if (sourceStat.size !== destStat.size) {
+      return false;
+    }
+    if (Math.abs(sourceStat.mtimeMs - destStat.mtimeMs) < 1) {
+      return true;
+    }
+    try {
+      const sourceBuffer = fs.readFileSync(sourcePath);
+      const destBuffer = fs.readFileSync(destPath);
+      return sourceBuffer.equals(destBuffer);
+    } catch {
+      return false;
+    }
+  }
+
+  private writePulledConflictSnapshot(
+    geminiPath: string,
+    relativePath: string,
+    sourcePath: string,
+    sourceMtimeMs: number
+  ): boolean {
+    const stamp = this.formatStamp(sourceMtimeMs);
+    const parsed = path.parse(relativePath);
+    const conflictName = `${parsed.name}.remote-${stamp}${parsed.ext}`;
+    const conflictPath = path.join(geminiPath, '.sync-conflicts', parsed.dir, conflictName);
+    const conflictDir = path.dirname(conflictPath);
+    if (!fs.existsSync(conflictDir)) {
+      fs.mkdirSync(conflictDir, { recursive: true });
+    }
+    try {
+      fs.copyFileSync(sourcePath, conflictPath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private formatStamp(ms: number): string {
+    const d = new Date(ms);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
+    return `${yyyy}${mm}${dd}-${hh}${min}${ss}`;
   }
 
   private getSyncRepoSubdir(config: SyncConfig): string {
