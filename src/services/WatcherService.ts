@@ -7,6 +7,7 @@
  * - Full sync (pull + push) instead of push-only for bidirectional freshness
  */
 import * as chokidar from 'chokidar';
+import * as path from 'path';
 import { ConfigService } from './ConfigService';
 import { SyncService } from './SyncService';
 
@@ -44,19 +45,28 @@ export class WatcherService {
       return;
     }
 
-    // Ignored patterns for chokidar (don't even watch these)
-    const ignored = [
-      '**/browser_recordings/**',
-      '**/user_settings.pb',
-      '**/node_modules/**',
-      '**/.git/**',
-      '**/google_accounts.json',
-      '**/oauth_creds.json',
-      '**/.sync-conflicts/**',
-      '**/*.conflict-*'
+    // explicitly watch only the core directories and files we care about syncing.
+    const watchPaths = [
+      path.join(config.geminiPath, 'annotations'),
+      path.join(config.geminiPath, 'brain'),
+      path.join(config.geminiPath, 'conversations'),
+      path.join(config.geminiPath, 'global_skills'),
+      path.join(config.geminiPath, 'knowledge'),
+      path.join(config.geminiPath, 'skills'),
+      path.join(config.geminiPath, 'mcp_config.json')
     ];
 
-    this.watcher = chokidar.watch(config.geminiPath, {
+    // Some global ignores just as a fallback
+    const ignored = [
+      '**/.DS_Store',
+      '**/Thumbs.db',
+      '**/*.tmp',
+      '**/*.bak',
+      '**/.sync.lock',
+      '**/.sync-conflicts/**'
+    ];
+
+    this.watcher = chokidar.watch(watchPaths, {
       ignored,
       persistent: true,
       ignoreInitial: true,
