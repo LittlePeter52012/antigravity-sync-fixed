@@ -592,12 +592,13 @@ export class SidePanelProvider implements vscode.WebviewViewProvider {
    * Generate HTML for the webview
    */
   private _getHtmlForWebview(webview: vscode.Webview): string {
+    const timestamp = new Date().getTime();
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview', 'main.js')
-    );
+    ).with({ query: `v=${timestamp}` });
     const styleUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview', 'media', 'styles.css')
-    );
+    ).with({ query: `v=${timestamp}` });
 
     const nonce = this.getNonce();
 

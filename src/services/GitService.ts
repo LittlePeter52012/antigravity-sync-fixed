@@ -301,22 +301,35 @@ export class GitService {
         // Empty directory - try to clone
         try {
           await simpleGit().clone(authUrl, this.repoPath);
-        } catch (error: unknown) {
-          // If clone fails (empty repo), init locally
-          const gitError = error as { message?: string };
-          if (gitError.message?.includes('empty repository')) {
-            // Init with initial branch name
-            await this.git.init(['--initial-branch=main']);
-            await this.git.addRemote('origin', authUrl);
-
+          
+          // Check if repository has any commits (is it an empty repo?)
+          const hasCommits = await this.git.raw(['rev-list', '-n', '1', '--all'])
+            .then(res => res.trim() !== '')
+            .catch(() => false);
+            
+          if (!hasCommits) {
+            this.log('[仓库初始化] 这是一个空仓库，正在创建初始提交...');
             // Create initial commit immediately to establish HEAD
             const readmePath = path.join(this.repoPath, 'README.md');
             fs.writeFileSync(readmePath, '# Antigravity 同步与自动重试\n\n用于同步 Gemini/Antigravity 上下文数据。\n');
             await this.git.add('README.md');
             await this.git.commit('初始提交');
-          } else {
-            throw error;
+            await this.git.push('origin', 'main', ['--set-upstream']);
           }
+        } catch (error: unknown) {
+          // Fallback if clone totally fails for some other edge case
+          const gitError = error as { message?: string };
+          this.log(`[仓库初始化] Clone 失败，尝试本地 init: ${gitError.message}`);
+          await this.git.init(['--initial-branch=main']);
+          await this.git.addRemote('origin', authUrl);
+          
+          const readmePath = path.join(this.repoPath, 'README.md');
+          if (!fs.existsSync(readmePath)) {
+            fs.writeFileSync(readmePath, '# Antigravity 同步与自动重试\n\n用于同步 Gemini/Antigravity 上下文数据。\n');
+          }
+          await this.git.add('README.md');
+          await this.git.commit('初始提交');
+          await this.git.push('origin', 'main', ['--set-upstream']).catch(() => {});
         }
       }
     }
