@@ -703,19 +703,9 @@ export class GitService {
             continue; // Skip the old keepLocal logic entirely
           } else {
             this.log(`[智能合并] ${mergeResult.description}，降级为时间戳策略`);
-            // Fall through to timestamp-based strategy below
-            if (isBinaryLike) {
-              if (sizeDiffRatio > 0.2) {
-                keepLocal = localSize >= remoteSize;
-                this.log(`[智能合并] ${file}: 大小 ${localSize} vs ${remoteSize}（${(sizeDiffRatio * 100).toFixed(0)}%）→ 保留${keepLocal ? '本地' : '远端'}（更大）`);
-              } else {
-                keepLocal = localMtime >= remoteMtime;
-                this.log(`[智能合并] ${file}: 大小接近 → 保留${keepLocal ? '本地' : '远端'}（更新优先）`);
-              }
-            } else {
-              keepLocal = localMtime >= remoteMtime;
-              this.log(`[智能合并] ${file}: 文本文件 → 保留${keepLocal ? '本地' : '远端'}（更新优先）`);
-            }
+            // Content merge failed for this text file → fall back to timestamp
+            keepLocal = localMtime >= remoteMtime;
+            this.log(`[智能合并] ${file}: 文本文件 → 保留${keepLocal ? '本地' : '远端'}（更新优先）`);
           }
         } else if (isBinaryLike) {
           if (sizeDiffRatio > 0.2) {
