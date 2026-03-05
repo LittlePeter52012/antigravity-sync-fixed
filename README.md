@@ -1,104 +1,74 @@
-# Antigravity 同步与自动重试
+# Antigravity 同步与自动重试 (v0.5.2)
 
-**自动同步 AI 上下文 + 自动重试（Auto Retry）**，减少看护与手动操作。  
-**Sync AI context + Auto Retry**, less babysitting and manual clicks.
-
----
-
-## 功能
-
-- 私有仓库同步（保护敏感信息）
-- 自动重试（AI 出错时自动点击 Retry）
-- 可选目录同步 + 更新优先的智能合并（冲突副本保留）
-- 同步子目录隔离（默认 `.antigravity-sync`）+ 同步密码校验
+**自动同步 AI 上下文 + 自动重试（Auto Retry）**，让你的 AI 助手在多台电脑间无缝衔接，告别繁琐的手动拷贝。
 
 ---
 
-> 冲突时会保留双方副本，文件名包含 `.conflict-设备-时间戳`，避免数据丢失。
+## 🚀 保姆级配置教程（新手必看）
 
-## 快速开始
+觉得配置太麻烦？只需跟着下面 **3 个步骤**，5 分钟即可永久搞定多端同步！我们的设计优先保证您的**绝对安全和隐私**。
 
-1. 创建 **私有 Git 仓库**
-2. 生成 **访问令牌（PAT / App Password）**
-3. 命令面板运行：`Antigravity 同步：配置仓库`
-4. 设置 **同步密码**（用于设备间验证）
+### 第一步：创建一个 GitHub 私有仓库用来存数据
+这是您专属的“私人云盘”，只有您自己能看到。
+1. 登录 [GitHub](https://github.com/)。
+2. 点击右上角的 `+` 号，选择 **New repository**。
+3. **Repository name**（仓库名）：随便填，比如填 `my-ai-sync`。
+4. ⚠️ **最重要的一步**：勾选 **Private**（私有库），**永远不要选 Public**！
+5. 勾选底部的 **Add a README file**（添加自述文件）。
+6. 点击绿色的 **Create repository** 按钮。
+7. 创建成功后，复制浏览器地址栏的链接，这就是你的**【私有仓库地址】**（例如：`https://github.com/你的名字/my-ai-sync`）。
 
----
+### 第二步：获取 GitHub 访问令牌（PAT）
+插件需要这把“钥匙”才能帮您自动上传和下载数据。
+1. 在 GitHub 任意页面，点击右上角您的头像 -> **Settings**（设置）。
+2. 在左侧菜单滑到最底端，点击 **Developer settings**（开发者设置）。
+3. 点击左侧的 **Personal access tokens** -> **Tokens (classic)**。
+4. 点击右上角 **Generate new token** -> **Generate new token (classic)**。
+5. **Note**（备注）：随便填，比如填 `Antigravity Sync`。
+6. **Expiration**（过期时间）：建议选择 `No expiration`（永不过期），免得以后还要重新弄。
+7. ⚠️ **勾选权限**：在下方的复选框中，**只需勾选 `repo` 这一大项**（它会自动勾选里面的所有子项，表示允许操作私有仓库）。
+8. 滑到最底部，点击绿色的 **Generate token**。
+9. 页面会显示一串以 `ghp_` 开头的长字符。**立刻复制并保存下来**！这就是你的**【访问令牌 (PAT)】**。（刷新页面就再也看不到了）。
 
-## 默认同步目录
+### 第三步：在 VS Code 中配置插件
+1. 在 VS Code 中按下快捷键 `Ctrl+Shift+P` (Windows) / `Cmd+Shift+P` (Mac) 打开命令面板。
+2. 输入并选择：`Antigravity 同步：配置仓库`。
+3. 把刚刚复制的**【私有仓库地址】**填进去，回车。
+4. 把刚刚复制的**【访问令牌 (PAT)】**填进去，回车。
+5. 会提示你输入**【同步密码】**：这是为了防止别人即使拿到了你的令牌也解不开数据。**自己想一个密码填进去，并牢牢记住！**（在第二台电脑上登录时，需要输入完全相同的仓库地址、令牌和这个同步密码）。
 
-- `knowledge/`
-- `brain/`
-- `conversations/`
-- `skills/`
-- `annotations/`
-
-> `annotations/` 存放对话元数据注解（`.pbtxt`），包含标题/标签、状态与批注等。  
-> 多机同步建议与 `conversations/`、`brain/` 一起同步。
-
----
-
-## 安装 / 更新
-
-**VSIX 安装：**
-- Extensions → `...` → **Install from VSIX...** → 选择 `.vsix` → Reload
-
-**检查更新（GitHub Release）：**
-- 命令面板运行：`Antigravity 同步：检查更新`
-- 或在面板「仓库」栏点击“检查更新”
- - 启动后可自动检查（设置：`antigravitySync.autoCheckUpdates`）
-
-**为什么没有“点更新”？**
-- 只有从 Marketplace / Open VSX 安装，才会出现 **Update / 更新**。
-
-**Update (English):**
-- Install via VSIX: Extensions → `...` → **Install from VSIX...** → Reload
-- One‑click Update requires Marketplace / Open VSX installation.
-- Check Updates: Command Palette → `Antigravity 同步：检查更新`
+🎉 **恭喜！大功告成！** 现在你可以完全忘记这回事了，插件会在你每次写完代码后，默默地在后台为你同步所有的 AI 记忆和知识库。
 
 ---
 
-## 配置（常用）
+## 核心特性 (v0.5+ 极致进化版)
 
-- `antigravitySync.repositoryUrl`：私有仓库地址
-- `antigravitySync.syncFolders`：同步目录
-- `antigravitySync.syncRepoSubdir`：仓库内同步子目录（默认 `.antigravity-sync`）
-- `antigravitySync.syncPasswordEnabled`：是否启用同步密码校验
-- `antigravitySync.autoCheckUpdates`：启动后自动检查更新
-
----
-
-## 隐私与安全
-
-- 仅允许私有仓库
-- 凭据存储在系统凭据管理器
-- 默认排除敏感文件（OAuth/凭证/系统文件等）
-- 同步数据写入 `.antigravity-sync`，避免影响仓库其他内容
-- 同步密码只存本机 Secret Storage，仓库仅存哈希
+- ⚡ **无感静默同步**：深度重构底层监听器，精准定位核心数据，几乎 **0 资源占用**。
+- 🧠 **智能内容融合 (Smart Merge)**：彻底丢弃粗暴的“直接覆盖”。如果两台电脑都对 JSON 或 Markdown 做了修改，它会自动在行级别和段落级别进行**双向合并**！
+- 🔐 **MCP 独立隔离**：多台电脑的本地路径不同？不用怕！`mcp_config.json` 会**只同步服务列表和远端 API Keys**，而永远保留当前电脑的主机本地路径（如 `command`, `_DIR` 等）。
+- 🛡️ **极致隐私**：全面拦截 `.webm` 录屏、`onboarding` 隐私配置、各种包含 Secret 的认证文件。数据安全固若金汤。
+- 🔁 **自带自动重试**：AI 卡住了？它能自动接管帮你点 Retry（需要配置 CDP）。
 
 ---
 
-## 忘记同步密码怎么办？
+## 常见问题排查
 
-- 同步密码不可找回（仓库只保存哈希）
-- 使用命令 **Antigravity 同步：重置同步密码** 重新设置
+**Q: 经常出现“限流警告”是怎么回事？**
+> A: 为了防止 GitHub 把您的账号当作机器人封禁，我们在底层加了 **2分钟冷却期** 和 **防封禁指数退避算法**。所以有时候你频繁按保存，它会在后台帮你积攒一波，然后一次性安全推送。请放心，数据绝不会丢。
 
----
-
-## 冲突与恢复策略
-
-- 拉取仅恢复已配置同步目录（默认 `knowledge/ brain/ conversations/ skills/ annotations/`）
-- 对本地较新的文件：保留本地，不强制覆盖
-- 远端版本会保存到 `~/.gemini/antigravity/.sync-conflicts/` 供人工检查
-- 仓库中的 `.conflict-*` 冲突工件不会回写到运行目录
+**Q: 忘记同步密码怎么办？**
+> A: 出于绝对的安全设计，同步密码一旦丢失**无法找回**（云端只存哈希）。如果您忘记了，请在命令面板运行 `Antigravity 同步：重置同步密码` 来强制重置。但请注意，如果您在电脑 A 重置了密码，电脑 B 也必须重新拉取并重置同样的密码才能继续握手。
 
 ---
 
-## 版权与致谢
+## 进阶配置（写给极客）
 
-本项目基于 **mrd9999/antigravity-sync** 二次开发，遵循原项目 **MIT License**。
+除了通过可视化命令面板，你也可以在 `settings.json` 中微调：
 
-- 原项目仓库：`https://github.com/mrd9999/antigravity-sync`
-- 本项目仓库：`https://github.com/LittlePeter52012/antigravity-sync-fixed`
+- `antigravitySync.syncFolders`: 默认同步 `["knowledge", "brain", "conversations", "skills", "global_skills", "annotations"]`。
+- `antigravitySync.autoSync`: 是否开启文件系统监听，默认 `true`。
+- `antigravitySync.excludePatterns`: 当你有一些奇奇怪怪的临时文件不想被同步，填在这里（遵循 `.gitignore` 语法）。
 
-MIT License
+---
+
+*本项目基于 mrd9999/antigravity-sync 进行深度二次重构演进。采用 MIT 协议开源。*
