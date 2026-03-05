@@ -290,12 +290,30 @@ export class GitService {
         await this.git.addRemote('origin', authUrl);
 
         // Pull remote content (will merge with existing files)
+        let remoteHasContent = false;
         try {
           await this.git.fetch('origin');
           // Checkout remote branch without destroying local files
           await this.git.checkout(['origin/main', '-B', 'main']);
+          remoteHasContent = true;
         } catch {
           // Remote might be empty, that's OK
+          this.log('[仓库初始化] 远端仓库为空，准备创建初始提交...');
+        }
+
+        // If remote was empty, we have no HEAD — must create initial commit
+        if (!remoteHasContent) {
+          const hasHead = await this.git.raw(['rev-parse', 'HEAD'])
+            .then(() => true)
+            .catch(() => false);
+          if (!hasHead) {
+            this.log('[仓库初始化] 本地目录有文件但无初始提交，正在创建...');
+            await this.git.add('-A');
+            await this.git.commit('初始提交：同步现有数据');
+            await this.git.push('origin', 'main', ['--set-upstream']).catch(e => {
+              this.log(`[仓库初始化] 首次推送失败（可忽略）：${(e as Error).message}`);
+            });
+          }
         }
       } else {
         // Empty directory - try to clone
@@ -808,6 +826,21 @@ export class GitService {
     const logMsg = (msg: string) => this.log(`${prefix} ${msg}`);
     logMsg('开始拉取...');
     try {
+      // Safety check: ensure HEAD exists (repo has at least one commit)
+      const hasHead = await this.git.raw(['rev-parse', 'HEAD'])
+        .then(() => true)
+        .catch(() => false);
+      if (!hasHead) {
+        logMsg('检测到仓库尚无初始提交，正在创建...');
+        await this.git.add('-A');
+        await this.git.commit('初始提交：同步现有数据');
+        await this.git.push('origin', 'main', ['--set-upstream']).catch(e => {
+          logMsg(`首次推送失败（可忽略）：${(e as Error).message}`);
+        });
+        logMsg('初始提交已完成，跳过本次拉取');
+        return;
+      }
+
       // Check initial status
       const status = await this.git.status();
       const hasChanges = status.files.length > 0;
