@@ -3,6 +3,7 @@
  */
 import simpleGit, { SimpleGit, SimpleGitOptions } from 'simple-git';
 import * as fs from 'fs';
+import { ContentMergeService } from './ContentMergeService';
 import * as path from 'path';
 import * as os from 'os';
 import { exec } from 'child_process';
@@ -18,9 +19,11 @@ export class GitService {
   private git: SimpleGit;
   private repoPath: string;
   private logger?: LoggerCallback;
+  private contentMerger: ContentMergeService;
 
   constructor(repoPath: string) {
     this.repoPath = repoPath;
+    this.contentMerger = new ContentMergeService();
 
     // CRITICAL: Ensure directory exists before simpleGit init
     if (!fs.existsSync(repoPath)) {
@@ -688,6 +691,32 @@ export class GitService {
           // Remote deleted: compare deletion time with local mtime
           keepLocal = localMtime >= remoteMtime;
           this.log(`[智能合并] ${file}: 远端不存在 → 按时间保留${keepLocal ? '本地' : '远端'}（更新优先）`);
+        } else if (localExists && remoteExists && remoteContent && !isBinaryLike) {
+          // ★ Content-Aware Merge: attempt intelligent merge for text files
+          const localBuffer = fs.readFileSync(localFilePath);
+          const remoteBuffer = Buffer.from(remoteContent, 'binary');
+          const mergeResult = this.contentMerger.merge(file, localBuffer, remoteBuffer);
+          if (mergeResult.wasMerged && mergeResult.merged !== null) {
+            // Content merge succeeded! Write the merged result
+            fs.writeFileSync(localFilePath, mergeResult.merged, 'utf-8');
+            this.log(`[智能合并] ★ ${mergeResult.description}`);
+            continue; // Skip the old keepLocal logic entirely
+          } else {
+            this.log(`[智能合并] ${mergeResult.description}，降级为时间戳策略`);
+            // Fall through to timestamp-based strategy below
+            if (isBinaryLike) {
+              if (sizeDiffRatio > 0.2) {
+                keepLocal = localSize >= remoteSize;
+                this.log(`[智能合并] ${file}: 大小 ${localSize} vs ${remoteSize}（${(sizeDiffRatio * 100).toFixed(0)}%）→ 保留${keepLocal ? '本地' : '远端'}（更大）`);
+              } else {
+                keepLocal = localMtime >= remoteMtime;
+                this.log(`[智能合并] ${file}: 大小接近 → 保留${keepLocal ? '本地' : '远端'}（更新优先）`);
+              }
+            } else {
+              keepLocal = localMtime >= remoteMtime;
+              this.log(`[智能合并] ${file}: 文本文件 → 保留${keepLocal ? '本地' : '远端'}（更新优先）`);
+            }
+          }
         } else if (isBinaryLike) {
           if (sizeDiffRatio > 0.2) {
             keepLocal = localSize >= remoteSize;

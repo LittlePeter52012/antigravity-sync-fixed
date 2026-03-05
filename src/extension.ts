@@ -108,6 +108,27 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       await syncService.initialize();
       watcherService.start();
       statusBarService.show();
+
+      // ★ Window Focus Auto-Pull: when user switches to this computer, silently pull latest data
+      let lastFocusPullTime = 0;
+      const FOCUS_PULL_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes minimum between focus pulls
+      context.subscriptions.push(
+        vscode.window.onDidChangeWindowState(async (state) => {
+          if (state.focused && syncService) {
+            const now = Date.now();
+            if (now - lastFocusPullTime > FOCUS_PULL_COOLDOWN_MS) {
+              lastFocusPullTime = now;
+              console.log('[Antigravity] 窗口获取焦点，后台静默拉取远端更新...');
+              try {
+                await syncService.pull();
+                sidePanelProvider?.updatePanelData();
+              } catch (error) {
+                console.warn('[Antigravity] 焦点拉取失败（非致命）：', (error as Error).message);
+              }
+            }
+          }
+        })
+      );
     } catch (error) {
       NotificationService.handleSyncError(error as Error);
     }

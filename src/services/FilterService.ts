@@ -12,23 +12,55 @@ export class FilterService {
 
   // Default patterns that MUST always be excluded
   private static readonly DEFAULT_EXCLUDES = [
-    // Antigravity internal - NOT needed for sync (both root and nested)
-    'antigravity-browser-profile/**',
+    // 1. Ignore EVERYTHING at the root level by default for safety
+    '/*',
+
+    // 2. EXPLICITLY ALLOW (un-ignore) core Antigravity directories
+    // We un-ignore both the folder name and its entire contents
+    '!/annotations',
+    '!/annotations/**',
+    '!/brain',
+    '!/brain/**',
+    '!/conversations',
+    '!/conversations/**',
+    '!/global_skills',
+    '!/global_skills/**',
+    '!/knowledge',
+    '!/knowledge/**',
+    '!/skills',
+    '!/skills/**',
+    // Also allow mcp_config.json (field-level smart merge handles path safety)
+    '!/mcp_config.json',
+
+    // 3. EXPLICITLY IGNORE dangerous/machine-specific things deeply (even inside allowed folders)
+    
+    // Temp and system files
+    '**/.DS_Store',
+    '**/Thumbs.db',
+    '**/*.tmp',
+    '**/*.bak',
+    '**/__pycache__/**',
+    '**/.sync.lock',
+
+    // Antigravity internal/machine-specific state
     '**/browser_recordings/**',
     '**/code_tracker/**',
     '**/context_state/**',
     '**/implicit/**',
     '**/playground/**',
+    '**/html_artifacts/**',
 
     // Config files that are machine-specific
     '**/browserAllowlist.txt',
     '**/browserOnboardingStatus.txt',
     '**/installation_id',
     '**/user_settings.pb',
+    '**/onboarding.json',
+    '**/onboarding.json.lock',
 
     // OAuth and credentials
-    'google_accounts.json',
-    'oauth_creds.json',
+    '**/google_accounts.json',
+    '**/oauth_creds.json',
     '**/credentials.json',
     '**/secrets.json',
     '**/*.key',
@@ -40,16 +72,12 @@ export class FilterService {
     '**/*.mov',
     '**/*.webp',
 
-    // Temp/log files (NOT *.pb - conversations are .pb files!)
+    // Log & module files
     '**/*.log',
-    '**/node_modules/',
+    '**/node_modules/**',
 
-    // System files
-    '.DS_Store',
-    'Thumbs.db',
-
-    // Git internals (handled by git itself, but just in case)
-    '.git/'
+    // Git internals (handled by git itself, but added for completeness here)
+    '**/.git/**'
   ];
 
   constructor(geminiPath: string, customPatterns: string[] = [], syncFolders: string[] = []) {
