@@ -404,6 +404,10 @@ export class SyncService {
       // Copy file (skip if unchanged)
       if (fs.existsSync(sourcePath)) {
         const sourceStat = fs.statSync(sourcePath);
+        // Safety: only copy regular files (skip directories, sockets, FIFOs, etc.)
+        if (!sourceStat.isFile()) {
+          continue;
+        }
         let shouldCopy = true;
         if (fs.existsSync(destPath)) {
           const destStat = fs.statSync(destPath);

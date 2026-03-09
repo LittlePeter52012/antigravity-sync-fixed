@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.5] - 2026-03-09
+
+### Fixed
+- 修复 symlink（符号链接）导致推送失败的 `ENOTSUP` 错误
+  - `FilterService.walkDirectory` 正确跟随 symlink 判断真实类型（目录/文件），跳过断裂链接和 socket 等特殊文件
+  - `SyncService.copyFilesToSyncRepo` 增加 `isFile()` 安全检查，仅复制普通文件
+
 ## [0.4.10] - 2026-02-28
 
 ### Fixed

@@ -153,7 +153,9 @@ export class FilterService {
   }
 
   /**
-   * Recursively walk directory and collect non-ignored files
+   * Recursively walk directory and collect non-ignored files.
+   * Handles symlinks correctly: follows symlinks to determine real type,
+   * skips dangling/broken symlinks and non-regular files (sockets, FIFOs, etc.)
    */
   private async walkDirectory(basePath: string, relativePath: string, files: string[]): Promise<void> {
     const currentPath = path.join(basePath, relativePath);
@@ -172,11 +174,29 @@ export class FilterService {
         continue;
       }
 
-      if (entry.isDirectory()) {
+      const fullPath = path.join(currentPath, entry.name);
+
+      // For symlinks, resolve to real type via fs.statSync (follows symlinks)
+      // Also handles edge cases: dangling symlinks, sockets, FIFOs, etc.
+      if (entry.isSymbolicLink()) {
+        try {
+          const realStat = fs.statSync(fullPath); // follows symlink
+          if (realStat.isDirectory()) {
+            await this.walkDirectory(basePath, entryRelativePath, files);
+          } else if (realStat.isFile()) {
+            files.push(entryRelativePath);
+          }
+          // Skip sockets, FIFOs, block/char devices, etc.
+        } catch {
+          // Dangling symlink or permission error - skip silently
+          continue;
+        }
+      } else if (entry.isDirectory()) {
         await this.walkDirectory(basePath, entryRelativePath, files);
-      } else {
+      } else if (entry.isFile()) {
         files.push(entryRelativePath);
       }
+      // Skip non-regular, non-directory, non-symlink entries (sockets, FIFOs, etc.)
     }
   }
 
